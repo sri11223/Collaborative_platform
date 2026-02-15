@@ -68,7 +68,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ boardId }) => {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <ActivityIcon className="w-4 h-4 text-gray-400" />
-          <h3 className="text-sm font-medium text-gray-700">Activity</h3>
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Activity</h3>
         </div>
         <button
           onClick={refresh}
@@ -80,7 +80,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ boardId }) => {
       </div>
 
       {activities.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-6">No activity yet</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No activity yet</p>
       ) : (
         <div className="space-y-0">
           {activities.map((activity) => (

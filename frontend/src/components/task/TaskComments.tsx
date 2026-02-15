@@ -54,7 +54,7 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
     <div>
       <div className="flex items-center gap-2 mb-3">
         <MessageSquare className="w-4 h-4 text-gray-400" />
-        <h3 className="text-sm font-medium text-gray-700">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Comments {comments.length > 0 && `(${comments.length})`}
         </h3>
       </div>
@@ -69,7 +69,7 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write a comment..."
               rows={2}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="w-full text-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none placeholder-gray-400 dark:placeholder-gray-500"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                   handleSubmit(e);
@@ -105,7 +105,7 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
                   {comment.user?.name || 'User'}
                 </span>
                 <span className="text-xs text-gray-400">{timeAgo(comment.createdAt)}</span>
@@ -119,7 +119,7 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
                   </button>
                 )}
               </div>
-              <p className="text-sm text-gray-600 mt-0.5 whitespace-pre-wrap break-words">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-wrap break-words">
                 {comment.content}
               </p>
             </div>
@@ -127,7 +127,7 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
         ))}
 
         {comments.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-4">No comments yet</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No comments yet</p>
         )}
       </div>
     </div>

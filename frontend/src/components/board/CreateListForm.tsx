@@ -34,7 +34,7 @@ export const CreateListForm: React.FC<CreateListFormProps> = ({ boardId }) => {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="flex-shrink-0 w-80 h-12 flex items-center gap-2 px-4 text-sm text-gray-500 bg-gray-100/80 hover:bg-gray-200/80 rounded-xl transition-colors"
+        className="flex-shrink-0 w-80 h-12 flex items-center gap-2 px-4 text-sm text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200/80 dark:hover:bg-gray-700/80 rounded-xl transition-colors"
       >
         <Plus className="w-4 h-4" />
         Add List
@@ -44,13 +44,13 @@ export const CreateListForm: React.FC<CreateListFormProps> = ({ boardId }) => {
 
   return (
     <div className="flex-shrink-0 w-80">
-      <form onSubmit={handleSubmit} className="bg-gray-100 rounded-xl p-3">
+      <form onSubmit={handleSubmit} className="bg-gray-100 dark:bg-gray-800 rounded-xl p-3">
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Enter list title..."
-          className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           autoFocus
         />
         <div className="flex items-center gap-2 mt-2">

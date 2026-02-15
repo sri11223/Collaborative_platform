@@ -131,11 +131,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   createTask: async (listId, data) => {
     const { data: res } = await taskApi.createTask(listId, data);
     const task = res.data;
-    set((state) => ({
-      lists: state.lists.map((l) =>
-        l.id === listId ? { ...l, tasks: [...l.tasks, task] } : l
-      ),
-    }));
+    set((state) => {
+      // Prevent duplicate if socket handler already added this task
+      const exists = state.lists.some((l) => l.tasks.some((t) => t.id === task.id));
+      if (exists) return state;
+      return {
+        lists: state.lists.map((l) =>
+          l.id === listId ? { ...l, tasks: [...l.tasks, task] } : l
+        ),
+      };
+    });
     return task;
   },
 
@@ -178,6 +183,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
     if (!movedTask || !fromListId) return;
 
+    // Skip if already in target at same position (prevents dup on socket echo)
+    if (fromListId === toListId) {
+      const list = currentLists.find((l) => l.id === toListId);
+      if (list && list.tasks[position]?.id === taskId) return;
+    }
+
     // Optimistic: remove from source, add to target
     set((state) => {
       const newLists = state.lists.map((l) => {
@@ -185,10 +196,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           return { ...l, tasks: l.tasks.filter((t) => t.id !== taskId) };
         }
         if (l.id === toListId) {
-          const newTasks = [...l.tasks];
+          const filteredTasks = l.tasks.filter((t) => t.id !== taskId);
           const updatedTask = { ...movedTask!, listId: toListId, position };
-          newTasks.splice(position, 0, updatedTask);
-          return { ...l, tasks: newTasks.map((t, i) => ({ ...t, position: i })) };
+          filteredTasks.splice(position, 0, updatedTask);
+          return { ...l, tasks: filteredTasks.map((t, i) => ({ ...t, position: i })) };
         }
         return l;
       });

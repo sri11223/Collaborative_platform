@@ -76,14 +76,14 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({ board, onInvite }) => 
               </button>
 
               {showMembers && (
-                <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-30 animate-slide-in">
-                  <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase">Members</div>
+                <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-30 animate-slide-in">
+                  <div className="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Members</div>
                   {board.members?.map((member) => (
-                    <div key={member.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50">
+                    <div key={member.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
                       <Avatar name={member.user.name} size="sm" avatar={member.user.avatar} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{member.user.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{member.user.email}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{member.user.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.user.email}</p>
                       </div>
                       <span className="text-xs text-gray-400 capitalize">{member.role}</span>
                     </div>

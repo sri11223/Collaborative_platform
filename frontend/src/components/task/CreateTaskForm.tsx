@@ -31,12 +31,12 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ listId, onClose 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 bg-white rounded-lg border border-gray-200 p-3">
+    <form onSubmit={handleSubmit} className="mt-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
       <textarea
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Enter task title..."
-        className="w-full text-sm border-none focus:outline-none resize-none placeholder-gray-400"
+        className="w-full text-sm border-none bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none resize-none placeholder-gray-400 dark:placeholder-gray-500"
         rows={2}
         autoFocus
         onKeyDown={(e) => {

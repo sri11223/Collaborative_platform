@@ -52,11 +52,11 @@ export const LoginForm: React.FC = () => {
             <div className="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center">
               <LayoutDashboard className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">TaskFlow</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">TaskFlow</span>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Welcome back</h2>
-          <p className="text-gray-500 mb-8">Sign in to your account to continue</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Welcome back</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-8">Sign in to your account to continue</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input

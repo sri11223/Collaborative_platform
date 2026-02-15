@@ -74,7 +74,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({ list, index, onTaskCli
                       setIsEditing(false);
                     }
                   }}
-                  className="text-sm font-semibold text-gray-900 bg-white border border-primary-300 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="text-sm font-semibold text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-primary-300 dark:border-primary-500 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-primary-500"
                   autoFocus
                 />
               ) : (
@@ -109,7 +109,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({ list, index, onTaskCli
                           setIsEditing(true);
                           setShowMenu(false);
                         }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 w-full"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                         Rename
@@ -119,7 +119,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({ list, index, onTaskCli
                           setShowDeleteConfirm(true);
                           setShowMenu(false);
                         }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Delete List

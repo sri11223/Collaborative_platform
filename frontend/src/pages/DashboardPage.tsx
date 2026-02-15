@@ -93,10 +93,10 @@ const DashboardPage: React.FC = () => {
 
       {/* Pending Invitations */}
       {invitations.length > 0 && (
-        <div className="mb-8 bg-primary-50 border border-primary-200 rounded-xl p-4">
+        <div className="mb-8 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Mail className="w-4 h-4 text-primary-600" />
-            <h2 className="text-sm font-semibold text-primary-900">
+            <Mail className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+            <h2 className="text-sm font-semibold text-primary-900 dark:text-primary-300">
               Pending Invitations ({invitations.length})
             </h2>
           </div>
@@ -104,15 +104,15 @@ const DashboardPage: React.FC = () => {
             {invitations.map((inv) => (
               <div
                 key={inv.id}
-                className="flex items-center justify-between bg-white rounded-lg px-4 py-3 shadow-sm"
+                className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg px-4 py-3 shadow-sm"
               >
                 <div className="flex items-center gap-3">
                   <Avatar name={inv.inviter?.name || 'User'} size="sm" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {inv.board?.title || 'Board'}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Invited by {inv.inviter?.name || 'someone'} as {inv.role}
                     </p>
                   </div>
@@ -185,18 +185,18 @@ const DashboardPage: React.FC = () => {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Previous
               </button>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 Page {pagination.page} of {pagination.totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page >= pagination.totalPages}
-                className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next
                 <ChevronRight className="w-4 h-4" />

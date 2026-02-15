@@ -147,7 +147,7 @@ const BoardPage: React.FC = () => {
       {/* Activity Toggle */}
       <button
         onClick={() => setShowActivity(!showActivity)}
-        className="fixed right-4 bottom-4 p-3 bg-white rounded-full shadow-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:shadow-xl transition-all z-30"
+        className="fixed right-4 bottom-4 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:shadow-xl transition-all z-30"
         title={showActivity ? 'Hide activity' : 'Show activity'}
       >
         {showActivity ? (
