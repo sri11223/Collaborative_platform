@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { invitationService } from '../services/invitation.service';
+import { notificationService } from '../services/notification.service';
+import { prisma } from '../index';
 
 export class InvitationController {
   async createInvitation(req: Request, res: Response, next: NextFunction) {
@@ -11,6 +13,19 @@ export class InvitationController {
       );
       const io = req.app.get('io');
       io.emit('invitation:created', invitation);
+      
+      // Send real-time notification to invitee if they have an account
+      const invitee = await prisma.user.findUnique({ where: { email: req.body.email } });
+      if (invitee) {
+        const notification = await notificationService.notifyInvitation(
+          invitation.board?.title || 'Board',
+          invitation.inviter?.name || 'Someone',
+          invitee.id,
+          req.params.boardId
+        );
+        io.to(`user:${invitee.id}`).emit('notification:new', notification);
+      }
+      
       res.status(201).json({ success: true, data: invitation });
     } catch (error) {
       next(error);

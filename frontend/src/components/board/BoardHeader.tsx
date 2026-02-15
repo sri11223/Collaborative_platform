@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../common/Button';
 import { Avatar, AvatarGroup } from '../common/Avatar';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { useBoardStore } from '../../store/boardStore';
 import { useAuthStore } from '../../store/authStore';
-import { ArrowLeft, Settings, Users, Trash2, UserPlus } from 'lucide-react';
+import { boardApi } from '../../api/board.api';
+import { favoriteApi } from '../../api/message.api';
+import { ArrowLeft, Settings, Users, Trash2, UserPlus, Edit3, Check, X, Star } from 'lucide-react';
 import type { Board } from '../../types';
 import toast from 'react-hot-toast';
 
@@ -16,13 +18,71 @@ interface BoardHeaderProps {
 
 export const BoardHeader: React.FC<BoardHeaderProps> = ({ board, onInvite }) => {
   const navigate = useNavigate();
-  const { deleteBoard } = useBoardStore();
+  const { deleteBoard, fetchBoard } = useBoardStore();
   const { user } = useAuthStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState(board.title);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const isOwner = board.ownerId === user?.id;
+  const isAdmin = board.members?.some(
+    (m) => m.userId === user?.id && (m.role === 'admin' || m.role === 'owner')
+  );
+
+  useEffect(() => {
+    setEditTitle(board.title);
+  }, [board.title]);
+
+  useEffect(() => {
+    // Check if board is favorited
+    favoriteApi.getFavorites().then(({ data }) => {
+      const favs = data.data || [];
+      setIsFavorite(favs.some((f: any) => f.boardId === board.id));
+    }).catch(() => {});
+  }, [board.id]);
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isEditingTitle]);
+
+  const handleSaveTitle = async () => {
+    const trimmed = editTitle.trim();
+    if (!trimmed || trimmed === board.title) {
+      setIsEditingTitle(false);
+      setEditTitle(board.title);
+      return;
+    }
+    try {
+      await boardApi.updateBoard(board.id, { title: trimmed });
+      await fetchBoard(board.id);
+      toast.success('Board name updated');
+    } catch {
+      toast.error('Failed to update board name');
+      setEditTitle(board.title);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleToggleFavorite = async () => {
+    try {
+      if (isFavorite) {
+        await favoriteApi.removeFavorite(board.id);
+        setIsFavorite(false);
+      } else {
+        await favoriteApi.addFavorite(board.id);
+        setIsFavorite(true);
+      }
+    } catch {
+      toast.error('Failed to update favorites');
+    }
+  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -54,7 +114,44 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({ board, onInvite }) => 
                 className="w-3.5 h-3.5 rounded-sm"
                 style={{ backgroundColor: board.color }}
               />
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{board.title}</h1>
+              {isEditingTitle ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') { setIsEditingTitle(false); setEditTitle(board.title); }
+                    }}
+                    onBlur={handleSaveTitle}
+                    className="text-lg font-semibold text-gray-900 dark:text-white bg-transparent border-b-2 border-primary-500 focus:outline-none px-1 min-w-[120px]"
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => { if (isOwner || isAdmin) setIsEditingTitle(true); }}
+                  className={`text-lg font-semibold text-gray-900 dark:text-white group flex items-center gap-2 ${
+                    (isOwner || isAdmin) ? 'hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer' : 'cursor-default'
+                  }`}
+                  title={(isOwner || isAdmin) ? 'Click to edit board name' : board.title}
+                >
+                  {board.title}
+                  {(isOwner || isAdmin) && (
+                    <Edit3 className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-gray-400 transition-opacity" />
+                  )}
+                </button>
+              )}
+              <button
+                onClick={handleToggleFavorite}
+                className={`p-1 rounded transition-colors ${
+                  isFavorite ? 'text-amber-400' : 'text-gray-300 hover:text-amber-400'
+                }`}
+                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-400' : ''}`} />
+              </button>
             </div>
           </div>
 

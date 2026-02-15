@@ -12,4 +12,6 @@ export const workspaceApi = {
     apiClient.post(`/workspaces/${workspaceId}/members`, { userId, role }),
   removeMember: (workspaceId: string, userId: string) =>
     apiClient.delete(`/workspaces/${workspaceId}/members/${userId}`),
+  inviteByEmail: (workspaceId: string, email: string) =>
+    apiClient.post(`/workspaces/${workspaceId}/invite`, { email }),
 };

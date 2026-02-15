@@ -52,6 +52,23 @@ class WorkspaceController {
       res.json({ success: true, message: 'Member removed' });
     } catch (err) { next(err); }
   }
+
+  async inviteByEmail(req: Request, res: Response, next: NextFunction) {
+    try {
+      const member = await workspaceService.inviteByEmail(
+        req.params.id, req.body.email, req.user!.userId
+      );
+
+      // Notify the invitee via socket
+      const io = req.app.get('io');
+      io.to(`user:${member.userId}`).emit('workspace:invited', {
+        workspaceId: req.params.id,
+        member,
+      });
+
+      res.status(201).json({ success: true, data: member });
+    } catch (err) { next(err); }
+  }
 }
 
 export const workspaceController = new WorkspaceController();

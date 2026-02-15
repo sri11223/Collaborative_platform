@@ -4,6 +4,7 @@ import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { BOARD_COLORS } from '../../constants';
 import { useBoardStore } from '../../store/boardStore';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -18,6 +19,7 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({ isOpen, onCl
   const [selectedColor, setSelectedColor] = useState(BOARD_COLORS[0]);
   const [isLoading, setIsLoading] = useState(false);
   const { createBoard } = useBoardStore();
+  const { currentWorkspace } = useWorkspaceStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,6 +34,7 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({ isOpen, onCl
         title: title.trim(),
         description: description.trim() || undefined,
         color: selectedColor,
+        workspaceId: currentWorkspace?.id,
       });
       toast.success('Board created!');
       onClose();

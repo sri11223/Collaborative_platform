@@ -10,6 +10,10 @@ import { activityController } from '../controllers/activity.controller';
 import { invitationController } from '../controllers/invitation.controller';
 import { labelController } from '../controllers/label.controller';
 import { workspaceController } from '../controllers/workspace.controller';
+import { notificationController } from '../controllers/notification.controller';
+import { documentController } from '../controllers/document.controller';
+import { messageController } from '../controllers/message.controller';
+import { favoriteController } from '../controllers/favorite.controller';
 
 export function setupRoutes(app: Express) {
   const router = Router();
@@ -115,6 +119,9 @@ export function setupRoutes(app: Express) {
   );
 
   // ===================== TASKS =====================
+  // My tasks must come BEFORE /tasks/:id so it doesn't get caught as an :id param
+  router.get('/tasks/my-tasks', authenticate, taskController.getMyTasks);
+
   router.post(
     '/lists/:listId/tasks',
     authenticate,
@@ -242,6 +249,42 @@ export function setupRoutes(app: Express) {
   // Token-based invite link (public info, requires auth to accept)
   router.get('/invitations/token/:token', invitationController.getInvitationByToken);
   router.post('/invitations/token/:token/accept', authenticate, invitationController.acceptByToken);
+
+  // ===================== NOTIFICATIONS =====================
+  router.get('/notifications', authenticate, notificationController.getNotifications);
+  router.get('/notifications/unread-count', authenticate, notificationController.getUnreadCount);
+  router.put('/notifications/:id/read', authenticate, notificationController.markAsRead);
+  router.put('/notifications/read-all', authenticate, notificationController.markAllAsRead);
+  router.delete('/notifications/:id', authenticate, notificationController.deleteNotification);
+  router.delete('/notifications/clear-all', authenticate, notificationController.clearAll);
+
+  // ===================== DOCUMENTS =====================
+  router.get('/workspaces/:workspaceId/documents', authenticate, documentController.getDocuments);
+  router.post('/workspaces/:workspaceId/documents', authenticate,
+    [body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title required')],
+    validate, documentController.createDocument);
+  router.get('/documents/:id', authenticate, documentController.getDocument);
+  router.put('/documents/:id', authenticate, documentController.updateDocument);
+  router.delete('/documents/:id', authenticate, documentController.deleteDocument);
+
+  // ===================== DIRECT MESSAGES =====================
+  router.get('/workspaces/:workspaceId/dm-members', authenticate, messageController.getWorkspaceMembers);
+  router.get('/messages/:userId', authenticate, messageController.getConversation);
+  router.post('/messages/:userId', authenticate,
+    [body('content').trim().isLength({ min: 1, max: 5000 }).withMessage('Message content required')],
+    validate, messageController.sendMessage);
+  router.delete('/messages/msg/:messageId', authenticate, messageController.deleteMessage);
+  router.get('/messages-unread/count', authenticate, messageController.getUnreadCount);
+
+  // ===================== FAVORITES =====================
+  router.get('/favorites', authenticate, favoriteController.getFavorites);
+  router.post('/favorites/:boardId', authenticate, favoriteController.addFavorite);
+  router.delete('/favorites/:boardId', authenticate, favoriteController.removeFavorite);
+
+  // ===================== WORKSPACE INVITE BY EMAIL =====================
+  router.post('/workspaces/:id/invite', authenticate,
+    [body('email').isEmail().normalizeEmail().withMessage('Valid email required')],
+    validate, workspaceController.inviteByEmail);
 
   // Health check
   router.get('/health', (_req, res) => {

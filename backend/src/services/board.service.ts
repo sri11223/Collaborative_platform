@@ -2,14 +2,19 @@ import { prisma } from '../index';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../utils/errors';
 
 export class BoardService {
-  async getUserBoards(userId: string, page: number, limit: number, search?: string) {
-    const where = {
+  async getUserBoards(userId: string, page: number, limit: number, search?: string, workspaceId?: string) {
+    const where: any = {
       OR: [
         { ownerId: userId },
         { members: { some: { userId } } },
       ],
       ...(search ? { title: { contains: search } } : {}),
     };
+
+    // Filter by workspace if provided
+    if (workspaceId) {
+      where.workspaceId = workspaceId;
+    }
 
     const [boards, total] = await Promise.all([
       prisma.board.findMany({

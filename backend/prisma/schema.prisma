@@ -24,6 +24,11 @@ model User {
   invitations          Invitation[]          @relation("InviterRelation")
   ownedWorkspaces      Workspace[]
   workspaceMemberships WorkspaceMember[]
+  notifications        Notification[]
+  documents            Document[]
+  sentMessages         DirectMessage[]       @relation("SentMessages")
+  receivedMessages     DirectMessage[]       @relation("ReceivedMessages")
+  favoriteBoards       FavoriteBoard[]
 
   @@index([email])
 }
@@ -38,8 +43,9 @@ model Workspace {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  boards  Board[]
-  members WorkspaceMember[]
+  boards    Board[]
+  members   WorkspaceMember[]
+  documents Document[]
 
   @@index([ownerId])
 }
@@ -75,6 +81,7 @@ model Board {
   activities  Activity[]
   labels      Label[]
   invitations Invitation[]
+  favorites   FavoriteBoard[]
 
   @@index([ownerId])
   @@index([workspaceId])
@@ -213,4 +220,64 @@ model Invitation {
   @@index([boardId])
   @@index([inviteeEmail])
   @@index([token])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // task_assigned, comment_added, invitation_received, task_due, mention, board_update
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  boardId   String?
+  taskId    String?
+  metadata  String?  // JSON string for extra data
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @default("")
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   String
+  creator     User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([createdBy])
+}
+
+model DirectMessage {
+  id         String   @id @default(cuid())
+  content    String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId   String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverId String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+}
+
+model FavoriteBoard {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, boardId])
+  @@index([userId])
 }

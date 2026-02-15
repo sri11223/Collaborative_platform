@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useBoardStore } from '../store/boardStore';
 import { useAuthStore } from '../store/authStore';
+import { useWorkspaceStore } from '../store/workspaceStore';
 import { invitationApi } from '../api/invitation.api';
 import { BoardCard } from '../components/board/BoardCard';
 import { CreateBoardModal } from '../components/board/CreateBoardModal';
@@ -19,6 +20,7 @@ import toast from 'react-hot-toast';
 const DashboardPage: React.FC = () => {
   const { boards, boardsPagination: pagination, boardsLoading: loading, fetchBoards } = useBoardStore();
   const { user } = useAuthStore();
+  const { currentWorkspace } = useWorkspaceStore();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -27,8 +29,8 @@ const DashboardPage: React.FC = () => {
   const debouncedSearch = useDebounce(search, 300);
 
   useEffect(() => {
-    fetchBoards({ page, search: debouncedSearch });
-  }, [page, debouncedSearch, fetchBoards]);
+    fetchBoards({ page, search: debouncedSearch, workspaceId: currentWorkspace?.id });
+  }, [page, debouncedSearch, fetchBoards, currentWorkspace?.id]);
 
   useEffect(() => {
     loadInvitations();
@@ -50,7 +52,7 @@ const DashboardPage: React.FC = () => {
       await invitationApi.acceptInvitation(id);
       setInvitations((prev) => prev.filter((i) => i.id !== id));
       toast.success('Invitation accepted');
-      fetchBoards({ page, search: debouncedSearch });
+      fetchBoards({ page, search: debouncedSearch, workspaceId: currentWorkspace?.id });
     } catch {
       toast.error('Failed to accept invitation');
     }

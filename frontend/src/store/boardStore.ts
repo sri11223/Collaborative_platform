@@ -16,8 +16,8 @@ interface BoardState {
   boardLoading: boolean;
 
   // Dashboard actions
-  fetchBoards: (params?: { page?: number; limit?: number; search?: string }) => Promise<void>;
-  createBoard: (data: { title: string; description?: string; color?: string }) => Promise<Board>;
+  fetchBoards: (params?: { page?: number; limit?: number; search?: string; workspaceId?: string }) => Promise<void>;
+  createBoard: (data: { title: string; description?: string; color?: string; workspaceId?: string }) => Promise<Board>;
   deleteBoard: (id: string) => Promise<void>;
 
   // Board actions

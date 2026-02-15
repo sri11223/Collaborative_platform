@@ -11,8 +11,9 @@ export class BoardController {
         config.pagination.maxLimit
       );
       const search = req.query.search as string | undefined;
+      const workspaceId = req.query.workspaceId as string | undefined;
 
-      const result = await boardService.getUserBoards(req.user!.userId, page, limit, search);
+      const result = await boardService.getUserBoards(req.user!.userId, page, limit, search, workspaceId);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

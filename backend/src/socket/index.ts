@@ -61,6 +61,20 @@ export function setupSocket(io: Server) {
       });
     });
 
+    // Handle DM typing
+    socket.on('dm:typing', (data: { receiverId: string }) => {
+      io.to(`user:${data.receiverId}`).emit('dm:typing', {
+        senderId: socket.userId,
+      });
+    });
+
+    // Handle DM stop typing
+    socket.on('dm:stop-typing', (data: { receiverId: string }) => {
+      io.to(`user:${data.receiverId}`).emit('dm:stop-typing', {
+        senderId: socket.userId,
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.userId} (${socket.id})`);
     });

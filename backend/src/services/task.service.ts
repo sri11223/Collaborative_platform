@@ -15,6 +15,53 @@ export class TaskService {
     list: { select: { id: true, title: true, boardId: true } },
   };
 
+  async getMyTasks(userId: string) {
+    // Get boards where user is admin or owner
+    const adminBoards = await prisma.boardMember.findMany({
+      where: { userId, role: { in: ['admin', 'owner'] } },
+      select: { board: { select: { id: true } } },
+    });
+    const adminBoardIds = adminBoards.map((bm) => bm.board.id);
+
+    // Also get boards where user is the owner directly
+    const ownedBoards = await prisma.board.findMany({
+      where: { ownerId: userId },
+      select: { id: true },
+    });
+    const allAdminBoardIds = [...new Set([...adminBoardIds, ...ownedBoards.map((b) => b.id)])];
+
+    const tasks = await prisma.task.findMany({
+      where: {
+        OR: [
+          // Tasks assigned to the user
+          { assignees: { some: { userId } } },
+          // All tasks from boards where user is admin/owner
+          { list: { boardId: { in: allAdminBoardIds } } },
+        ],
+      },
+      include: {
+        ...this.taskInclude,
+        list: {
+          select: {
+            id: true,
+            title: true,
+            boardId: true,
+            board: { select: { id: true, title: true, color: true } },
+          },
+        },
+      },
+      orderBy: [{ dueDate: 'asc' }, { priority: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    // Deduplicate (a task could match both conditions)
+    const seen = new Set<string>();
+    return tasks.filter((t) => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }
+
   async getTaskById(taskId: string, userId: string) {
     const task = await prisma.task.findUnique({
       where: { id: taskId },

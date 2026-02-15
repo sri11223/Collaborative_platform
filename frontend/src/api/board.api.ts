@@ -2,13 +2,13 @@ import apiClient from '../lib/axios';
 import type { ApiResponse, Board, BoardsResponse } from '../types';
 
 export const boardApi = {
-  getBoards: (params?: { page?: number; limit?: number; search?: string }) =>
+  getBoards: (params?: { page?: number; limit?: number; search?: string; workspaceId?: string }) =>
     apiClient.get<ApiResponse<BoardsResponse>>('/boards', { params }),
 
   getBoard: (id: string) =>
     apiClient.get<ApiResponse<Board>>(`/boards/${id}`),
 
-  createBoard: (data: { title: string; description?: string; color?: string }) =>
+  createBoard: (data: { title: string; description?: string; color?: string; workspaceId?: string }) =>
     apiClient.post<ApiResponse<Board>>('/boards', data),
 
   updateBoard: (id: string, data: { title?: string; description?: string; color?: string }) =>

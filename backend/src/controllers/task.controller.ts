@@ -1,7 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { taskService } from '../services/task.service';
+import { notificationService } from '../services/notification.service';
 
 export class TaskController {
+  async getMyTasks(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tasks = await taskService.getMyTasks(req.user!.userId);
+      res.json({ success: true, data: tasks });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getTask(req: Request, res: Response, next: NextFunction) {
     try {
       const task = await taskService.getTaskById(req.params.id, req.user!.userId);
@@ -81,6 +91,17 @@ export class TaskController {
       if (boardId) {
         io.to(`board:${boardId}`).emit('task:updated', task);
       }
+      // Send real-time notification to the assigned user
+      if (req.body.userId !== req.user!.userId) {
+        const notification = await notificationService.notifyTaskAssigned(
+          task.title,
+          req.user!.userId, // Will be resolved to name in service
+          req.body.userId,
+          boardId || '',
+          task.id
+        );
+        io.to(`user:${req.body.userId}`).emit('notification:new', notification);
+      }
       res.status(201).json({ success: true, data: assignee });
     } catch (error) {
       next(error);
@@ -144,6 +165,22 @@ export class TaskController {
         taskId: req.params.id,
         comment: result.comment,
       });
+      // Notify task assignees about the new comment
+      const task = await taskService.getTaskById(req.params.id, req.user!.userId);
+      if (task.assignees) {
+        for (const assignee of task.assignees) {
+          if (assignee.userId !== req.user!.userId) {
+            const notification = await notificationService.notifyCommentAdded(
+              task.title,
+              result.comment.user?.name || 'Someone',
+              assignee.userId,
+              result.boardId,
+              task.id
+            );
+            io.to(`user:${assignee.userId}`).emit('notification:new', notification);
+          }
+        }
+      }
       res.status(201).json({ success: true, data: result.comment });
     } catch (error) {
       next(error);

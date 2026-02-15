@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useBoardStore } from '../store/boardStore';
+import { useNotificationStore } from '../store/notificationStore';
+import { myTasksApi } from '../api/notification.api';
 import { invitationApi } from '../api/invitation.api';
 import { Avatar } from '../components/common/Avatar';
 import { Button } from '../components/common/Button';
 import {
-  Inbox, MessageSquare, AtSign, CheckSquare, Star,
-  ChevronRight, Mail, Check, X, Clock, Sparkles,
-  ArrowRight, Bell, Search,
+  Inbox, CheckSquare, Star, Clock, Sparkles,
+  ArrowRight, Search, CalendarDays, AlertTriangle,
 } from 'lucide-react';
 import type { Invitation } from '../types';
 import toast from 'react-hot-toast';
@@ -26,56 +27,35 @@ const MOTIVATIONAL_QUOTES = [
 const HomePage: React.FC = () => {
   const { user } = useAuthStore();
   const { boards } = useBoardStore();
+  const { unreadCount, fetchUnreadCount } = useNotificationStore();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<Tab>('primary');
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loadingInvitations, setLoadingInvitations] = useState(true);
+  const [myTaskCount, setMyTaskCount] = useState(0);
+  const [overdueTasks, setOverdueTasks] = useState(0);
+  const [dueTodayTasks, setDueTodayTasks] = useState(0);
 
   const quote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   useEffect(() => {
-    loadInvitations();
+    fetchUnreadCount();
+    loadMyTaskStats();
   }, []);
 
-  const loadInvitations = async () => {
+  const loadMyTaskStats = async () => {
     try {
-      const { data } = await invitationApi.getUserInvitations();
-      setInvitations(data.data.filter((inv: Invitation) => inv.status === 'pending'));
+      const { data } = await myTasksApi.getMyTasks();
+      const tasks = data.data || [];
+      setMyTaskCount(tasks.length);
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      setOverdueTasks(tasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < now && t.dueDate.split('T')[0] !== todayStr).length);
+      setDueTodayTasks(tasks.filter((t: any) => t.dueDate && t.dueDate.split('T')[0] === todayStr).length);
     } catch {
       // silent
-    } finally {
-      setLoadingInvitations(false);
     }
   };
-
-  const handleAccept = async (id: string) => {
-    try {
-      await invitationApi.acceptInvitation(id);
-      setInvitations((prev) => prev.filter((i) => i.id !== id));
-      toast.success('Invitation accepted!');
-    } catch {
-      toast.error('Failed to accept');
-    }
-  };
-
-  const handleDecline = async (id: string) => {
-    try {
-      await invitationApi.declineInvitation(id);
-      setInvitations((prev) => prev.filter((i) => i.id !== id));
-    } catch {
-      toast.error('Failed to decline');
-    }
-  };
-
-  const tabs: { id: Tab; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'primary', label: 'Primary', icon: Inbox },
-    { id: 'other', label: 'Other', icon: Bell },
-    { id: 'later', label: 'Later', icon: Clock },
-    { id: 'cleared', label: 'Cleared', icon: Check },
-  ];
 
   return (
     <div className="h-full flex flex-col">
@@ -97,7 +77,7 @@ const HomePage: React.FC = () => {
         <div className="px-8 pt-10 pb-8">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              {greeting}, {user?.name?.split(' ')[0]}! 👋
+              {greeting}, {user?.name?.split(' ')[0]}!
             </h1>
             <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 mt-3">
               <Sparkles className="w-4 h-4 text-amber-500" />
@@ -110,113 +90,75 @@ const HomePage: React.FC = () => {
 
         {/* Quick access cards */}
         <div className="px-8 pb-6">
-          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Inbox card */}
             <QuickCard
               icon={Inbox}
               title="Inbox"
-              count={invitations.length}
+              count={unreadCount}
               color="bg-blue-500"
-              description="Pending notifications and invitations"
-              onClick={() => setActiveTab('primary')}
+              description="Unread notifications"
+              onClick={() => navigate('/inbox')}
             />
             {/* My Tasks card */}
             <QuickCard
               icon={CheckSquare}
               title="My Tasks"
-              count={0}
+              count={myTaskCount}
               color="bg-green-500"
               description="Tasks assigned to you"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/my-tasks')}
+            />
+            {/* Planner card */}
+            <QuickCard
+              icon={CalendarDays}
+              title="Planner"
+              count={dueTodayTasks}
+              color="bg-amber-500"
+              description={dueTodayTasks > 0 ? `${dueTodayTasks} due today` : 'Calendar view'}
+              onClick={() => navigate('/planner')}
             />
             {/* Recent Boards card */}
             <QuickCard
               icon={Star}
-              title="Recent Boards"
+              title="Boards"
               count={boards.length}
               color="bg-purple-500"
-              description="Jump back into your boards"
+              description="In this workspace"
               onClick={() => navigate('/dashboard')}
             />
           </div>
         </div>
 
-        {/* Inbox section */}
+        {/* Overdue alert */}
+        {overdueTasks > 0 && (
+          <div className="px-8 pb-4">
+            <div className="max-w-5xl mx-auto">
+              <button
+                onClick={() => navigate('/my-tasks')}
+                className="w-full flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-5 py-3 text-left hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              >
+                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                    You have {overdueTasks} overdue task{overdueTasks > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-red-500 dark:text-red-500/70">Click to view your tasks</p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-red-400" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Recent boards list */}
         <div className="px-8 pb-10">
           <div className="max-w-5xl mx-auto">
-            {/* Tabs */}
-            <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-800">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Tab content */}
-            {activeTab === 'primary' && (
-              <div className="space-y-2">
-                {invitations.length > 0 ? (
-                  invitations.map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl px-5 py-4 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-                        <Mail className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          Board Invitation: <span className="text-primary-600 dark:text-primary-400">{inv.board?.title || 'Board'}</span>
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {inv.inviter?.name || 'Someone'} invited you as {inv.role}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => handleAccept(inv.id)}
-                          className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg transition-colors"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleDecline(inv.id)}
-                          className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs font-medium rounded-lg transition-colors"
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <EmptyInbox />
-                )}
-              </div>
-            )}
-
-            {activeTab === 'other' && <EmptyInbox message="No other notifications" />}
-            {activeTab === 'later' && <EmptyInbox message="Nothing saved for later" />}
-            {activeTab === 'cleared' && <EmptyInbox message="All cleared!" />}
-
-            {/* Recent boards list */}
             {boards.length > 0 && (
-              <div className="mt-8">
+              <div>
                 <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-gray-400" />
-                  Recently Accessed
+                  Recent Boards
                 </h3>
                 <div className="space-y-1">
                   {boards.slice(0, 5).map((board) => (
@@ -239,6 +181,24 @@ const HomePage: React.FC = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {boards.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                  <Star className="w-7 h-7 text-gray-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No boards in this workspace</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  Create a board from the dashboard to get started
+                </p>
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="mt-4 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  Go to Dashboard
+                </button>
               </div>
             )}
           </div>
@@ -275,20 +235,6 @@ const QuickCard: React.FC<{
     <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{title}</h3>
     <p className="text-xs text-gray-400">{description}</p>
   </button>
-);
-
-// ─── Empty Inbox ─────────────────────────────────────────────
-
-const EmptyInbox: React.FC<{ message?: string }> = ({ message = 'You\'re all caught up!' }) => (
-  <div className="flex flex-col items-center justify-center py-16 text-center">
-    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-      <Inbox className="w-7 h-7 text-gray-400" />
-    </div>
-    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{message}</p>
-    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-      Notifications and updates will appear here
-    </p>
-  </div>
 );
 
 export default HomePage;

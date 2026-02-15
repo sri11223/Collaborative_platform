@@ -13,8 +13,15 @@ const SignupPage = lazy(() => import('./pages/SignupPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
+const InboxPage = lazy(() => import('./pages/InboxPage'));
+const MyTasksPage = lazy(() => import('./pages/MyTasksPage'));
+const PlannerPage = lazy(() => import('./pages/PlannerPage'));
+const TeamsPage = lazy(() => import('./pages/TeamsPage'));
+const DocsPage = lazy(() => import('./pages/DocsPage'));
 const InvitePage = lazy(() => import('./pages/InvitePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const DirectMessagesPage = lazy(() => import('./pages/DirectMessagesPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 const App: React.FC = () => {
   const { loadUser } = useAuthStore();
@@ -62,14 +69,16 @@ const App: React.FC = () => {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/home" element={<HomePage />} />
-              <Route path="/inbox" element={<HomePage />} />
+              <Route path="/inbox" element={<InboxPage />} />
+              <Route path="/my-tasks" element={<MyTasksPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/board/:id" element={<BoardPage />} />
-              <Route path="/planner" element={<HomePage />} />
+              <Route path="/planner" element={<PlannerPage />} />
               <Route path="/ai" element={<HomePage />} />
-              <Route path="/teams" element={<HomePage />} />
-              <Route path="/docs" element={<HomePage />} />
-              <Route path="/settings" element={<DashboardPage />} />
+              <Route path="/teams" element={<TeamsPage />} />
+              <Route path="/docs" element={<DocsPage />} />
+              <Route path="/messages" element={<DirectMessagesPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>
 

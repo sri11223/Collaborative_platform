@@ -152,6 +152,39 @@ export class WorkspaceService {
     await prisma.workspaceMember.deleteMany({ where: { workspaceId, userId } });
     return { message: 'Member removed' };
   }
+
+  async inviteByEmail(workspaceId: string, email: string, requesterId: string) {
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
+    if (!workspace) throw new NotFoundError('Workspace not found');
+
+    // Check requester is owner/admin
+    if (workspace.ownerId !== requesterId) {
+      const requesterMember = await prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId, userId: requesterId } },
+      });
+      if (!requesterMember || !['admin', 'owner'].includes(requesterMember.role)) {
+        throw new ForbiddenError('Only owner/admin can invite members');
+      }
+    }
+
+    // Find user by email
+    const invitee = await prisma.user.findUnique({ where: { email } });
+    if (!invitee) throw new NotFoundError('No user found with that email');
+
+    // Check if already a member
+    const existing = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: invitee.id } },
+    });
+    if (existing) throw new ConflictError('User is already a member of this workspace');
+
+    // Add as member
+    const member = await prisma.workspaceMember.create({
+      data: { workspaceId, userId: invitee.id, role: 'member' },
+      include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+    });
+
+    return member;
+  }
 }
 
 export const workspaceService = new WorkspaceService();

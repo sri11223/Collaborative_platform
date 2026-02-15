@@ -4,14 +4,19 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useBoardStore } from '../../store/boardStore';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { InviteToWorkspaceModal } from '../board/InviteToWorkspaceModal';
 import { Avatar } from '../common/Avatar';
+import { favoriteApi } from '../../api/message.api';
 import {
   Home, Inbox, CalendarDays, Sparkles, Users2, FileText,
   MoreHorizontal, ChevronRight, ChevronDown, Plus, Search,
   Settings, LogOut, Sun, Moon, LayoutDashboard, Bell,
   Star, MessageSquare, CheckSquare, Hash, PanelLeftClose, PanelLeft,
+  UserPlus, StarOff,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // ─── Icon Rail Items ─────────────────────────────────────────
 const ICON_RAIL_ITEMS = [
@@ -36,29 +41,63 @@ export const AppSidebar: React.FC = () => {
   const { theme, toggleTheme } = useThemeStore();
   const { workspaces, currentWorkspace, fetchWorkspaces } = useWorkspaceStore();
   const { boards, fetchBoards } = useBoardStore();
+  const { unreadCount, fetchUnreadCount, initSocketListeners } = useNotificationStore();
 
   const [collapsed, setCollapsed] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [favoritesOpen, setFavoritesOpen] = useState(true);
+  const [dmOpen, setDmOpen] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showWorkspaceInvite, setShowWorkspaceInvite] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchWorkspaces();
-    fetchBoards({ page: 1, search: '' });
-  }, [fetchWorkspaces, fetchBoards]);
+    fetchUnreadCount();
+    loadFavorites();
+    const cleanup = initSocketListeners();
+    return cleanup;
+  }, [fetchWorkspaces, fetchUnreadCount, initSocketListeners]);
+
+  // Re-fetch boards when workspace changes
+  useEffect(() => {
+    fetchBoards({ page: 1, search: '', workspaceId: currentWorkspace?.id });
+  }, [currentWorkspace?.id, fetchBoards]);
+
+  const loadFavorites = async () => {
+    try {
+      const { data } = await favoriteApi.getFavorites();
+      setFavorites(data.data || []);
+      setFavoriteIds(new Set((data.data || []).map((f: any) => f.boardId)));
+    } catch { /* silent */ }
+  };
+
+  const toggleFavorite = async (boardId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      if (favoriteIds.has(boardId)) {
+        await favoriteApi.removeFavorite(boardId);
+        setFavorites((prev) => prev.filter((f) => f.boardId !== boardId));
+        setFavoriteIds((prev) => { const n = new Set(prev); n.delete(boardId); return n; });
+      } else {
+        const { data } = await favoriteApi.addFavorite(boardId);
+        setFavorites((prev) => [data.data, ...prev]);
+        setFavoriteIds((prev) => new Set(prev).add(boardId));
+      }
+    } catch {
+      toast.error('Failed to update favorites');
+    }
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // Determine which boards belong to current workspace
-  const workspaceBoards = currentWorkspace
-    ? boards.filter((b) => (b as any).workspaceId === currentWorkspace.id)
-    : boards;
-
-  // Show all boards if no workspace filter matched
-  const displayBoards = workspaceBoards.length > 0 ? workspaceBoards : boards;
+  // Boards are already filtered by workspace from the API
+  const displayBoards = boards;
 
   const activeRailItem = ICON_RAIL_ITEMS.find((item) => location.pathname.startsWith(item.path));
 
@@ -164,8 +203,8 @@ export const AppSidebar: React.FC = () => {
           {/* Quick actions */}
           <div className="px-3 py-2 space-y-0.5">
             <SidebarNavItem to="/home" icon={Home} label="Home" />
-            <SidebarNavItem to="/inbox" icon={Inbox} label="Inbox" badge={3} />
-            <SidebarNavItem to="/dashboard" icon={LayoutDashboard} label="My Tasks" />
+            <SidebarNavItem to="/inbox" icon={Inbox} label="Inbox" badge={unreadCount} />
+            <SidebarNavItem to="/my-tasks" icon={CheckSquare} label="My Tasks" />
           </div>
 
           <div className="border-t border-gray-100 dark:border-gray-800 mx-3" />
@@ -179,9 +218,35 @@ export const AppSidebar: React.FC = () => {
               open={favoritesOpen}
               onToggle={() => setFavoritesOpen(!favoritesOpen)}
             >
-              <div className="text-xs text-gray-400 dark:text-gray-500 px-2 py-2 italic">
-                No favorites yet
-              </div>
+              {favorites.length > 0 ? (
+                favorites.map((fav) => (
+                  <NavLink
+                    key={fav.boardId}
+                    to={`/board/${fav.boardId}`}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors group ${
+                        isActive
+                          ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      }`
+                    }
+                  >
+                    <Star className="w-4 h-4 text-amber-400 fill-amber-400 flex-shrink-0" />
+                    <span className="truncate flex-1">{fav.board?.title || 'Board'}</span>
+                    <button
+                      onClick={(e) => toggleFavorite(fav.boardId, e)}
+                      className="p-0.5 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                      title="Remove from favorites"
+                    >
+                      <StarOff className="w-3 h-3" />
+                    </button>
+                  </NavLink>
+                ))
+              ) : (
+                <div className="text-xs text-gray-400 dark:text-gray-500 px-2 py-2 italic">
+                  Star boards to add favorites
+                </div>
+              )}
             </SidebarSection>
 
             {/* Spaces/Boards section */}
@@ -191,13 +256,24 @@ export const AppSidebar: React.FC = () => {
               open={spacesOpen}
               onToggle={() => setSpacesOpen(!spacesOpen)}
               action={
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
-                  title="New board"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-0.5">
+                  {currentWorkspace && (
+                    <button
+                      onClick={() => setShowWorkspaceInvite(true)}
+                      className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+                      title="Invite to workspace"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+                    title="New board"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               }
             >
               {displayBoards.length > 0 ? (
@@ -220,9 +296,17 @@ export const AppSidebar: React.FC = () => {
                       {board.title.charAt(0).toUpperCase()}
                     </div>
                     <span className="truncate flex-1">{board.title}</span>
-                    <span className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100">
-                      {board._count?.lists || board.lists?.length || 0}
-                    </span>
+                    <button
+                      onClick={(e) => toggleFavorite(board.id, e)}
+                      className={`p-0.5 transition-all rounded ${
+                        favoriteIds.has(board.id)
+                          ? 'text-amber-400'
+                          : 'text-gray-300 opacity-0 group-hover:opacity-100 hover:text-amber-400'
+                      }`}
+                      title={favoriteIds.has(board.id) ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      <Star className={`w-3 h-3 ${favoriteIds.has(board.id) ? 'fill-amber-400' : ''}`} />
+                    </button>
                   </NavLink>
                 ))
               ) : (
@@ -232,16 +316,43 @@ export const AppSidebar: React.FC = () => {
               )}
             </SidebarSection>
 
-            {/* Direct Messages placeholder */}
+            {/* Direct Messages */}
             <SidebarSection
               title="Direct Messages"
               icon={MessageSquare}
-              open={false}
-              onToggle={() => {}}
+              open={dmOpen}
+              onToggle={() => setDmOpen(!dmOpen)}
             >
-              <div className="text-xs text-gray-400 dark:text-gray-500 px-2 py-2 italic">
-                Coming soon
-              </div>
+              {currentWorkspace?.members && currentWorkspace.members.filter(m => m.userId !== user?.id).length > 0 ? (
+                <>
+                  {currentWorkspace.members
+                    .filter((m) => m.userId !== user?.id)
+                    .slice(0, 5)
+                    .map((member) => (
+                      <button
+                        key={member.userId}
+                        onClick={() => navigate('/messages')}
+                        className="flex items-center gap-2 px-2 py-1.5 w-full rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <Avatar name={member.user?.name || ''} size="xs" avatar={member.user?.avatar} />
+                        <span className="truncate flex-1 text-left">{member.user?.name || 'Member'}</span>
+                      </button>
+                    ))}
+                  <button
+                    onClick={() => navigate('/messages')}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                  >
+                    View all messages
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => navigate('/messages')}
+                  className="text-xs text-gray-400 dark:text-gray-500 px-2 py-2 italic hover:text-primary-500 transition-colors"
+                >
+                  Open Messages
+                </button>
+              )}
             </SidebarSection>
           </div>
 
@@ -267,6 +378,16 @@ export const AppSidebar: React.FC = () => {
         >
           <PanelLeft className="w-4 h-4" />
         </button>
+      )}
+
+      {/* Workspace Invite Modal */}
+      {currentWorkspace && (
+        <InviteToWorkspaceModal
+          isOpen={showWorkspaceInvite}
+          onClose={() => setShowWorkspaceInvite(false)}
+          workspaceId={currentWorkspace.id}
+          workspaceName={currentWorkspace.name}
+        />
       )}
     </div>
   );
