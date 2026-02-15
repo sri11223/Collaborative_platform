@@ -2,6 +2,7 @@ import { prisma } from '../index';
 import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors';
 import { boardService } from './board.service';
 import { activityService } from './activity.service';
+import { sendEmail, buildInviteEmail } from '../utils/email';
 
 export class InvitationService {
   async createInvitation(
@@ -38,6 +39,21 @@ export class InvitationService {
         board: { select: { id: true, title: true } },
         inviter: { select: { id: true, name: true, email: true } },
       },
+    });
+
+    // Send invitation email
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const inviteLink = `${frontendUrl}/invite/${invitation.token}`;
+    const emailContent = buildInviteEmail({
+      inviterName: invitation.inviter.name,
+      boardTitle: invitation.board.title,
+      role: invitation.role,
+      inviteLink,
+    });
+    await sendEmail({
+      to: data.email,
+      subject: emailContent.subject,
+      html: emailContent.html,
     });
 
     return invitation;
@@ -124,6 +140,61 @@ export class InvitationService {
       orderBy: { createdAt: 'desc' },
     });
     return invitations;
+  }
+
+  async getInvitationByToken(token: string) {
+    const invitation = await prisma.invitation.findUnique({
+      where: { token },
+      include: {
+        board: { select: { id: true, title: true, color: true } },
+        inviter: { select: { id: true, name: true, email: true, avatar: true } },
+      },
+    });
+    if (!invitation) throw new NotFoundError('Invitation not found');
+    if (invitation.status !== 'pending') throw new BadRequestError('Invitation is no longer pending');
+    if (invitation.expiresAt < new Date()) throw new BadRequestError('Invitation has expired');
+    return invitation;
+  }
+
+  async acceptByToken(token: string, userId: string) {
+    const invitation = await prisma.invitation.findUnique({
+      where: { token },
+      include: { board: true },
+    });
+    if (!invitation) throw new NotFoundError('Invitation not found');
+    if (invitation.status !== 'pending') throw new BadRequestError('Invitation is no longer pending');
+    if (invitation.expiresAt < new Date()) throw new BadRequestError('Invitation has expired');
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundError('User not found');
+
+    // Check email match
+    if (user.email !== invitation.inviteeEmail) {
+      throw new BadRequestError('This invitation was sent to a different email address');
+    }
+
+    // Check if already a member
+    const existing = await prisma.boardMember.findUnique({
+      where: { boardId_userId: { boardId: invitation.boardId, userId } },
+    });
+    if (existing) {
+      await prisma.invitation.update({ where: { token }, data: { status: 'accepted' } });
+      return { message: 'Already a member', boardId: invitation.boardId };
+    }
+
+    await prisma.boardMember.create({
+      data: { boardId: invitation.boardId, userId, role: invitation.role },
+    });
+    await prisma.invitation.update({ where: { token }, data: { status: 'accepted' } });
+
+    await activityService.log({
+      type: 'member_joined',
+      description: 'joined via invite link',
+      boardId: invitation.boardId,
+      userId,
+    });
+
+    return { message: 'Invitation accepted', boardId: invitation.boardId };
   }
 }
 

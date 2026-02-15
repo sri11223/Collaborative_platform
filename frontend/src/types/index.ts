@@ -7,6 +7,29 @@ export interface User {
   createdAt?: string;
 }
 
+// ==================== Workspace ====================
+export interface Workspace {
+  id: string;
+  name: string;
+  color: string;
+  icon: string | null;
+  ownerId: string;
+  boards: Board[];
+  members: WorkspaceMember[];
+  _count?: { boards: number; members: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  user: User;
+  role: string;
+  joinedAt: string;
+}
+
 // ==================== Board ====================
 export interface Board {
   id: string;
@@ -14,6 +37,7 @@ export interface Board {
   description: string | null;
   color: string;
   ownerId: string;
+  workspaceId?: string | null;
   owner: User;
   members: BoardMember[];
   lists: List[];

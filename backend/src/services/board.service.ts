@@ -77,13 +77,14 @@ export class BoardService {
     return board;
   }
 
-  async createBoard(data: { title: string; description?: string; color?: string }, userId: string) {
+  async createBoard(data: { title: string; description?: string; color?: string; workspaceId?: string }, userId: string) {
     const board = await prisma.board.create({
       data: {
         title: data.title,
         description: data.description,
         color: data.color || '#6366f1',
         ownerId: userId,
+        workspaceId: data.workspaceId || null,
         members: {
           create: { userId, role: 'admin' },
         },

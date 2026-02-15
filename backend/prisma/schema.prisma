@@ -16,25 +16,59 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ownedBoards  Board[]
-  memberships  BoardMember[]
-  assignments  TaskAssignee[]
-  activities   Activity[]
-  comments     Comment[]
-  invitations  Invitation[] @relation("InviterRelation")
+  ownedBoards          Board[]
+  memberships          BoardMember[]
+  assignments          TaskAssignee[]
+  activities           Activity[]
+  comments             Comment[]
+  invitations          Invitation[]          @relation("InviterRelation")
+  ownedWorkspaces      Workspace[]
+  workspaceMemberships WorkspaceMember[]
 
   @@index([email])
 }
 
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#6366f1")
+  icon      String?
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  boards  Board[]
+  members WorkspaceMember[]
+
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  role        String    @default("member")
+  joinedAt    DateTime  @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
 model Board {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   description String?
-  color       String   @default("#6366f1")
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  color       String     @default("#6366f1")
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  workspaceId String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   lists       List[]
   members     BoardMember[]
@@ -43,6 +77,7 @@ model Board {
   invitations Invitation[]
 
   @@index([ownerId])
+  @@index([workspaceId])
 }
 
 model BoardMember {

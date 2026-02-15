@@ -171,6 +171,7 @@ const BoardPage: React.FC = () => {
         boardLabels={boardLabels}
         boardMembers={board.members || []}
         boardLists={lists}
+        onLabelsChanged={loadLabels}
       />
     </div>
   );

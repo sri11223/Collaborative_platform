@@ -12,6 +12,8 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignupPage = lazy(() => import('./pages/SignupPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const BoardPage = lazy(() => import('./pages/BoardPage'));
+const HomePage = lazy(() => import('./pages/HomePage'));
+const InvitePage = lazy(() => import('./pages/InvitePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const App: React.FC = () => {
@@ -54,12 +56,20 @@ const App: React.FC = () => {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
+              <Route path="/home" element={<HomePage />} />
+              <Route path="/inbox" element={<HomePage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/board/:id" element={<BoardPage />} />
+              <Route path="/planner" element={<HomePage />} />
+              <Route path="/ai" element={<HomePage />} />
+              <Route path="/teams" element={<HomePage />} />
+              <Route path="/docs" element={<HomePage />} />
+              <Route path="/settings" element={<DashboardPage />} />
             </Route>
           </Route>
 

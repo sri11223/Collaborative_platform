@@ -60,6 +60,29 @@ export class InvitationController {
       next(error);
     }
   }
+
+  async getInvitationByToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const invitation = await invitationService.getInvitationByToken(req.params.token);
+      res.json({ success: true, data: invitation });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async acceptByToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await invitationService.acceptByToken(req.params.token, req.user!.userId);
+      const io = req.app.get('io');
+      io.to(`board:${result.boardId}`).emit('member:joined', {
+        boardId: result.boardId,
+        userId: req.user!.userId,
+      });
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const invitationController = new InvitationController();

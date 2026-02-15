@@ -3,192 +3,20 @@ import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { RichTextEditor, RichTextDisplay } from '../common/RichTextEditor';
 import { useBoardStore } from '../../store/boardStore';
 import { useAuthStore } from '../../store/authStore';
 import { taskApi } from '../../api/task.api';
+import { labelApi } from '../../api/invitation.api';
 import { PRIORITIES } from '../../constants';
 import { timeAgo } from '../../utils/helpers';
 import {
   X, Calendar, Tag, Trash2, Edit3, Check,
   Flag, Plus, MessageCircle, Send,
-  Bold, Italic, Link2, List as ListIcon, AtSign,
-  ChevronDown, Clock, Underline,
-  Strikethrough, Code, ListOrdered, Quote,
+  ChevronDown, Clock,
 } from 'lucide-react';
 import type { Task, Comment, Label, BoardMember, List } from '../../types';
 import toast from 'react-hot-toast';
-
-// ==================== Rich Text Helpers ====================
-
-function applyFormatting(
-  textarea: HTMLTextAreaElement,
-  format: string,
-  setText: (val: string) => void
-) {
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  const value = textarea.value;
-  const selected = value.substring(start, end);
-  let newText = value;
-  let newCursorStart = start;
-  let newCursorEnd = end;
-
-  switch (format) {
-    case 'bold':
-      newText = value.substring(0, start) + `**${selected || 'bold text'}**` + value.substring(end);
-      newCursorStart = selected ? start + 2 : start + 2;
-      newCursorEnd = selected ? end + 2 : start + 11;
-      break;
-    case 'italic':
-      newText = value.substring(0, start) + `*${selected || 'italic text'}*` + value.substring(end);
-      newCursorStart = selected ? start + 1 : start + 1;
-      newCursorEnd = selected ? end + 1 : start + 12;
-      break;
-    case 'underline':
-      newText = value.substring(0, start) + `__${selected || 'underlined text'}__` + value.substring(end);
-      newCursorStart = selected ? start + 2 : start + 2;
-      newCursorEnd = selected ? end + 2 : start + 17;
-      break;
-    case 'strikethrough':
-      newText = value.substring(0, start) + `~~${selected || 'strikethrough'}~~` + value.substring(end);
-      newCursorStart = selected ? start + 2 : start + 2;
-      newCursorEnd = selected ? end + 2 : start + 15;
-      break;
-    case 'code':
-      if (selected.includes('\n')) {
-        newText = value.substring(0, start) + `\`\`\`\n${selected || 'code'}\n\`\`\`` + value.substring(end);
-      } else {
-        newText = value.substring(0, start) + `\`${selected || 'code'}\`` + value.substring(end);
-      }
-      newCursorStart = start + 1;
-      newCursorEnd = selected ? end + 1 : start + 5;
-      break;
-    case 'link':
-      newText = value.substring(0, start) + `[${selected || 'link text'}](url)` + value.substring(end);
-      newCursorStart = selected ? end + 3 : start + 12;
-      newCursorEnd = selected ? end + 6 : start + 15;
-      break;
-    case 'list':
-      if (selected) {
-        const lines = selected.split('\n').map((l) => `- ${l}`).join('\n');
-        newText = value.substring(0, start) + lines + value.substring(end);
-      } else {
-        newText = value.substring(0, start) + `\n- ` + value.substring(end);
-        newCursorStart = start + 3;
-        newCursorEnd = start + 3;
-      }
-      break;
-    case 'ordered-list':
-      if (selected) {
-        const lines = selected.split('\n').map((l, i) => `${i + 1}. ${l}`).join('\n');
-        newText = value.substring(0, start) + lines + value.substring(end);
-      } else {
-        newText = value.substring(0, start) + `\n1. ` + value.substring(end);
-        newCursorStart = start + 4;
-        newCursorEnd = start + 4;
-      }
-      break;
-    case 'quote':
-      if (selected) {
-        const lines = selected.split('\n').map((l) => `> ${l}`).join('\n');
-        newText = value.substring(0, start) + lines + value.substring(end);
-      } else {
-        newText = value.substring(0, start) + `\n> ` + value.substring(end);
-        newCursorStart = start + 3;
-        newCursorEnd = start + 3;
-      }
-      break;
-    case 'mention':
-      newText = value.substring(0, start) + `@` + value.substring(end);
-      newCursorStart = start + 1;
-      newCursorEnd = start + 1;
-      break;
-    default:
-      return;
-  }
-
-  setText(newText);
-  setTimeout(() => {
-    textarea.focus();
-    textarea.setSelectionRange(newCursorStart, newCursorEnd);
-  }, 0);
-}
-
-function renderMarkdown(text: string): string {
-  if (!text) return '';
-  return text
-    .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 rounded px-3 py-2 my-1 text-xs font-mono overflow-x-auto"><code>$1</code></pre>')
-    .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400">$1</code>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/__(.+?)__/g, '<u>$1</u>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/~~(.+?)~~/g, '<del class="text-gray-400">$1</del>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-primary-500 hover:text-primary-600 underline">$1</a>')
-    .replace(/^> (.+)$/gm, '<blockquote class="border-l-3 border-primary-400 pl-3 italic text-gray-500 dark:text-gray-400 my-1">$1</blockquote>')
-    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal">$1</li>')
-    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/@(\w+)/g, '<span class="text-primary-500 font-medium">@$1</span>')
-    .replace(/\n/g, '<br/>');
-}
-
-// ==================== Formatting Toolbar ====================
-
-interface ToolbarProps {
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  setText: (val: string) => void;
-  compact?: boolean;
-}
-
-const FormattingToolbar: React.FC<ToolbarProps> = ({ textareaRef, setText, compact }) => {
-  const handle = (format: string) => {
-    if (textareaRef.current) {
-      applyFormatting(textareaRef.current, format, setText);
-    }
-  };
-
-  const btnClass = compact
-    ? 'p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
-    : 'p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors';
-  const iconSize = compact ? 'w-3.5 h-3.5' : 'w-4 h-4';
-
-  return (
-    <div className="flex items-center gap-0.5 flex-wrap">
-      <button type="button" className={btnClass} onClick={() => handle('bold')} title="Bold (**text**)">
-        <Bold className={iconSize} />
-      </button>
-      <button type="button" className={btnClass} onClick={() => handle('italic')} title="Italic (*text*)">
-        <Italic className={iconSize} />
-      </button>
-      <button type="button" className={btnClass} onClick={() => handle('underline')} title="Underline (__text__)">
-        <Underline className={iconSize} />
-      </button>
-      <button type="button" className={btnClass} onClick={() => handle('strikethrough')} title="Strikethrough (~~text~~)">
-        <Strikethrough className={iconSize} />
-      </button>
-      <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-      <button type="button" className={btnClass} onClick={() => handle('code')} title="Code (`code`)">
-        <Code className={iconSize} />
-      </button>
-      <button type="button" className={btnClass} onClick={() => handle('link')} title="Link ([text](url))">
-        <Link2 className={iconSize} />
-      </button>
-      <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-      <button type="button" className={btnClass} onClick={() => handle('list')} title="Bullet List">
-        <ListIcon className={iconSize} />
-      </button>
-      <button type="button" className={btnClass} onClick={() => handle('ordered-list')} title="Numbered List">
-        <ListOrdered className={iconSize} />
-      </button>
-      <button type="button" className={btnClass} onClick={() => handle('quote')} title="Quote (> text)">
-        <Quote className={iconSize} />
-      </button>
-      <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-      <button type="button" className={btnClass} onClick={() => handle('mention')} title="Mention (@user)">
-        <AtSign className={iconSize} />
-      </button>
-    </div>
-  );
-};
 
 // ==================== Status Colors ====================
 
@@ -211,6 +39,7 @@ interface TaskDetailModalProps {
   boardLabels: Label[];
   boardMembers?: BoardMember[];
   boardLists?: List[];
+  onLabelsChanged?: () => void;
 }
 
 export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
@@ -220,13 +49,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   boardLabels,
   boardMembers = [],
   boardLists = [],
+  onLabelsChanged,
 }) => {
   const { updateTask, deleteTask, moveTask } = useBoardStore();
   const { user: currentUser } = useAuthStore();
   const contentRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const descTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const chatTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [task, setTask] = useState<Task | null>(initialTask);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -241,6 +69,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [submittingChat, setSubmittingChat] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [newLabelName, setNewLabelName] = useState('');
+  const [newLabelColor, setNewLabelColor] = useState('#3b82f6');
 
   useEffect(() => {
     if (initialTask?.id && isOpen) {
@@ -379,6 +209,25 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       setShowLabelPicker(false);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to add label');
+    }
+  };
+
+  const handleCreateAndAddLabel = async () => {
+    if (!newLabelName.trim() || !task) return;
+    try {
+      const boardId = task.list?.boardId || task.listId;
+      const { data: created } = await labelApi.createLabel(boardId, { name: newLabelName.trim(), color: newLabelColor });
+      const newLabel = created.data;
+      await taskApi.addLabel(task.id, newLabel.id);
+      const { data } = await taskApi.getTask(task.id);
+      setTask(data.data);
+      setNewLabelName('');
+      setNewLabelColor('#3b82f6');
+      setShowLabelPicker(false);
+      onLabelsChanged?.();
+      toast.success('Label created & added');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to create label');
     }
   };
 
@@ -671,20 +520,54 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                           <Tag className="w-3 h-3" />
                           Add
                         </button>
-                        {showLabelPicker && availableLabels.length > 0 && (
+                        {showLabelPicker && (
                           <>
                             <div className="fixed inset-0 z-10" onClick={() => setShowLabelPicker(false)} />
-                            <div className="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20 max-h-40 overflow-y-auto">
-                            {availableLabels.map((label) => (
-                              <button
-                                key={label.id}
-                                onClick={() => handleAddLabel(label.id)}
-                                className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 w-full"
-                              >
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: label.color }} />
-                                {label.name}
-                              </button>
-                            ))}
+                            <div className="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20 max-h-64 overflow-y-auto">
+                              {availableLabels.length > 0 && (
+                                <>
+                                  <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Existing Labels</div>
+                                  {availableLabels.map((label) => (
+                                    <button
+                                      key={label.id}
+                                      onClick={() => handleAddLabel(label.id)}
+                                      className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 w-full"
+                                    >
+                                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: label.color }} />
+                                      {label.name}
+                                    </button>
+                                  ))}
+                                  <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                                </>
+                              )}
+                              <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Create New</div>
+                              <div className="px-3 py-2 space-y-2">
+                                <input
+                                  type="text"
+                                  value={newLabelName}
+                                  onChange={(e) => setNewLabelName(e.target.value)}
+                                  placeholder="Label name..."
+                                  className="w-full text-xs border border-gray-200 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndAddLabel(); }}
+                                />
+                                <div className="flex items-center gap-1.5">
+                                  {['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'].map((c) => (
+                                    <button
+                                      key={c}
+                                      onClick={() => setNewLabelColor(c)}
+                                      className={`w-5 h-5 rounded-full border-2 transition-all ${newLabelColor === c ? 'border-gray-800 dark:border-white scale-110' : 'border-transparent'}`}
+                                      style={{ backgroundColor: c }}
+                                    />
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={handleCreateAndAddLabel}
+                                  disabled={!newLabelName.trim()}
+                                  className="w-full text-xs bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white rounded px-2 py-1.5 transition-colors"
+                                >
+                                  Create & Add
+                                </button>
+                              </div>
                             </div>
                           </>
                         )}
@@ -714,17 +597,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   </div>
                   {isEditingDesc ? (
                     <div>
-                      <div className="p-1.5 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-lg bg-gray-50 dark:bg-gray-800">
-                        <FormattingToolbar textareaRef={descTextareaRef} setText={setEditDesc} />
-                      </div>
-                      <textarea
-                        ref={descTextareaRef}
-                        value={editDesc}
-                        onChange={(e) => setEditDesc(e.target.value)}
-                        rows={6}
-                        className="w-full text-sm border border-gray-200 dark:border-gray-700 border-t-0 rounded-b-lg px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-mono"
-                        autoFocus
-                        placeholder="Add a detailed description... Use **bold**, *italic*, `code`, - lists, > quotes"
+                      <RichTextEditor
+                        content={editDesc}
+                        onChange={setEditDesc}
+                        placeholder="Add a detailed description..."
+                        minHeight="150px"
                       />
                       <div className="flex gap-2 mt-2">
                         <Button size="sm" onClick={handleSaveDescription}>Save</Button>
@@ -737,12 +614,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                       className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-h-[80px] border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
                     >
                       {task.description ? (
-                        <div
-                          className="prose prose-sm dark:prose-invert max-w-none"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(task.description) }}
-                        />
+                        <RichTextDisplay content={task.description} />
                       ) : (
-                        <span className="text-gray-400 dark:text-gray-500 italic">Click to add a description... Use markdown for formatting</span>
+                        <span className="text-gray-400 dark:text-gray-500 italic">Click to add a description...</span>
                       )}
                     </div>
                   )}
@@ -815,10 +689,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                               ? 'bg-primary-500 text-white rounded-br-md'
                               : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-600 rounded-bl-md'
                           }`}>
-                            <div
-                              className="whitespace-pre-wrap break-words text-left prose prose-sm max-w-none"
-                              dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.content) }}
-                            />
+                            <div className="whitespace-pre-wrap break-words text-left prose prose-sm max-w-none">
+                              <RichTextDisplay content={comment.content} />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -830,35 +703,31 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
               {/* Chat input */}
               <div className="p-3 border-t border-gray-100 dark:border-gray-800">
-                <form onSubmit={handleSendChat}>
-                  <div className="relative">
-                    <FormattingToolbar textareaRef={chatTextareaRef} setText={setChatMessage} compact />
-                    <div className="flex items-end gap-2">
-                      <textarea
-                        ref={chatTextareaRef}
-                        value={chatMessage}
-                        onChange={(e) => setChatMessage(e.target.value)}
-                        placeholder="Type a message..."
-                        rows={2}
-                        className="flex-1 text-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none placeholder-gray-400 dark:placeholder-gray-500"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendChat(e);
-                          }
-                        }}
-                      />
-                      <button
-                        type="submit"
-                        disabled={!chatMessage.trim() || submittingChat}
-                        className="p-2.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl transition-colors flex-shrink-0"
-                      >
-                        <Send className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 px-1">Enter to send · Shift+Enter for new line</p>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <RichTextEditor
+                      content={chatMessage}
+                      onChange={setChatMessage}
+                      placeholder="Type a message..."
+                      compact
+                      minHeight="50px"
+                      onSubmit={() => {
+                        if (chatMessage.trim()) {
+                          handleSendChat({ preventDefault: () => {} } as React.FormEvent);
+                        }
+                      }}
+                    />
                   </div>
-                </form>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChat({ preventDefault: () => {} } as React.FormEvent)}
+                    disabled={!chatMessage.trim() || submittingChat}
+                    className="p-2.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl transition-colors flex-shrink-0 mb-0.5"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 px-1">Enter to send · Shift+Enter for new line</p>
               </div>
             </div>
           </div>

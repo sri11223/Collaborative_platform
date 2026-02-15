@@ -9,6 +9,7 @@ import { taskController } from '../controllers/task.controller';
 import { activityController } from '../controllers/activity.controller';
 import { invitationController } from '../controllers/invitation.controller';
 import { labelController } from '../controllers/label.controller';
+import { workspaceController } from '../controllers/workspace.controller';
 
 export function setupRoutes(app: Express) {
   const router = Router();
@@ -38,6 +39,19 @@ export function setupRoutes(app: Express) {
   router.get('/auth/me', authenticate, authController.getProfile);
   router.put('/auth/profile', authenticate, authController.updateProfile);
   router.get('/auth/users/search', authenticate, authController.searchUsers);
+
+  // ===================== WORKSPACES =====================
+  router.get('/workspaces', authenticate, workspaceController.getWorkspaces);
+  router.post('/workspaces', authenticate,
+    [body('name').trim().isLength({ min: 1, max: 100 }).withMessage('Name required (max 100)')],
+    validate, workspaceController.createWorkspace);
+  router.get('/workspaces/:id', authenticate, workspaceController.getWorkspace);
+  router.put('/workspaces/:id', authenticate, workspaceController.updateWorkspace);
+  router.delete('/workspaces/:id', authenticate, workspaceController.deleteWorkspace);
+  router.post('/workspaces/:id/members', authenticate,
+    [body('userId').notEmpty().withMessage('User ID required')],
+    validate, workspaceController.addMember);
+  router.delete('/workspaces/:id/members/:userId', authenticate, workspaceController.removeMember);
 
   // ===================== BOARDS =====================
   router.get('/boards', authenticate, boardController.getBoards);
@@ -224,6 +238,10 @@ export function setupRoutes(app: Express) {
   router.put('/invitations/:id/accept', authenticate, invitationController.acceptInvitation);
   router.put('/invitations/:id/decline', authenticate, invitationController.declineInvitation);
   router.get('/boards/:boardId/invitations', authenticate, invitationController.getBoardInvitations);
+
+  // Token-based invite link (public info, requires auth to accept)
+  router.get('/invitations/token/:token', invitationController.getInvitationByToken);
+  router.post('/invitations/token/:token/accept', authenticate, invitationController.acceptByToken);
 
   // Health check
   router.get('/health', (_req, res) => {

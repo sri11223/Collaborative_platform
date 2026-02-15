@@ -1,5 +1,5 @@
 import { prisma } from '../index';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError, ConflictError } from '../utils/errors';
 import { boardService } from './board.service';
 
 export class ListService {
@@ -28,6 +28,14 @@ export class ListService {
 
   async createList(boardId: string, title: string, userId: string) {
     await boardService.verifyBoardAccess(boardId, userId);
+
+    // Prevent duplicate list names within the same board
+    const existing = await prisma.list.findFirst({
+      where: { boardId, title: { equals: title } },
+    });
+    if (existing) {
+      throw new ConflictError('A list with this name already exists in the board');
+    }
 
     const maxPosition = await prisma.list.findFirst({
       where: { boardId },
