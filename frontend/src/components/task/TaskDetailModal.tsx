@@ -6,23 +6,211 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 import { useBoardStore } from '../../store/boardStore';
 import { useAuthStore } from '../../store/authStore';
 import { taskApi } from '../../api/task.api';
-import { authApi } from '../../api/auth.api';
-import { PRIORITIES, LABEL_COLORS } from '../../constants';
+import { PRIORITIES } from '../../constants';
 import { timeAgo } from '../../utils/helpers';
 import {
-  X, Calendar, Tag, Users, Trash2, Edit3, Check,
-  Flag, UserPlus, Plus, MessageCircle, Send,
-  Bold, Italic, Link2, List, Hash, AtSign,
-  ChevronDown, Clock, AlertCircle, Paperclip
+  X, Calendar, Tag, Trash2, Edit3, Check,
+  Flag, Plus, MessageCircle, Send,
+  Bold, Italic, Link2, List as ListIcon, AtSign,
+  ChevronDown, Clock, Underline,
+  Strikethrough, Code, ListOrdered, Quote,
 } from 'lucide-react';
-import type { Task, User, Comment, Label } from '../../types';
+import type { Task, Comment, Label, BoardMember, List } from '../../types';
 import toast from 'react-hot-toast';
+
+// ==================== Rich Text Helpers ====================
+
+function applyFormatting(
+  textarea: HTMLTextAreaElement,
+  format: string,
+  setText: (val: string) => void
+) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const value = textarea.value;
+  const selected = value.substring(start, end);
+  let newText = value;
+  let newCursorStart = start;
+  let newCursorEnd = end;
+
+  switch (format) {
+    case 'bold':
+      newText = value.substring(0, start) + `**${selected || 'bold text'}**` + value.substring(end);
+      newCursorStart = selected ? start + 2 : start + 2;
+      newCursorEnd = selected ? end + 2 : start + 11;
+      break;
+    case 'italic':
+      newText = value.substring(0, start) + `*${selected || 'italic text'}*` + value.substring(end);
+      newCursorStart = selected ? start + 1 : start + 1;
+      newCursorEnd = selected ? end + 1 : start + 12;
+      break;
+    case 'underline':
+      newText = value.substring(0, start) + `__${selected || 'underlined text'}__` + value.substring(end);
+      newCursorStart = selected ? start + 2 : start + 2;
+      newCursorEnd = selected ? end + 2 : start + 17;
+      break;
+    case 'strikethrough':
+      newText = value.substring(0, start) + `~~${selected || 'strikethrough'}~~` + value.substring(end);
+      newCursorStart = selected ? start + 2 : start + 2;
+      newCursorEnd = selected ? end + 2 : start + 15;
+      break;
+    case 'code':
+      if (selected.includes('\n')) {
+        newText = value.substring(0, start) + `\`\`\`\n${selected || 'code'}\n\`\`\`` + value.substring(end);
+      } else {
+        newText = value.substring(0, start) + `\`${selected || 'code'}\`` + value.substring(end);
+      }
+      newCursorStart = start + 1;
+      newCursorEnd = selected ? end + 1 : start + 5;
+      break;
+    case 'link':
+      newText = value.substring(0, start) + `[${selected || 'link text'}](url)` + value.substring(end);
+      newCursorStart = selected ? end + 3 : start + 12;
+      newCursorEnd = selected ? end + 6 : start + 15;
+      break;
+    case 'list':
+      if (selected) {
+        const lines = selected.split('\n').map((l) => `- ${l}`).join('\n');
+        newText = value.substring(0, start) + lines + value.substring(end);
+      } else {
+        newText = value.substring(0, start) + `\n- ` + value.substring(end);
+        newCursorStart = start + 3;
+        newCursorEnd = start + 3;
+      }
+      break;
+    case 'ordered-list':
+      if (selected) {
+        const lines = selected.split('\n').map((l, i) => `${i + 1}. ${l}`).join('\n');
+        newText = value.substring(0, start) + lines + value.substring(end);
+      } else {
+        newText = value.substring(0, start) + `\n1. ` + value.substring(end);
+        newCursorStart = start + 4;
+        newCursorEnd = start + 4;
+      }
+      break;
+    case 'quote':
+      if (selected) {
+        const lines = selected.split('\n').map((l) => `> ${l}`).join('\n');
+        newText = value.substring(0, start) + lines + value.substring(end);
+      } else {
+        newText = value.substring(0, start) + `\n> ` + value.substring(end);
+        newCursorStart = start + 3;
+        newCursorEnd = start + 3;
+      }
+      break;
+    case 'mention':
+      newText = value.substring(0, start) + `@` + value.substring(end);
+      newCursorStart = start + 1;
+      newCursorEnd = start + 1;
+      break;
+    default:
+      return;
+  }
+
+  setText(newText);
+  setTimeout(() => {
+    textarea.focus();
+    textarea.setSelectionRange(newCursorStart, newCursorEnd);
+  }, 0);
+}
+
+function renderMarkdown(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 rounded px-3 py-2 my-1 text-xs font-mono overflow-x-auto"><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-400">$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.+?)__/g, '<u>$1</u>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/~~(.+?)~~/g, '<del class="text-gray-400">$1</del>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-primary-500 hover:text-primary-600 underline">$1</a>')
+    .replace(/^> (.+)$/gm, '<blockquote class="border-l-3 border-primary-400 pl-3 italic text-gray-500 dark:text-gray-400 my-1">$1</blockquote>')
+    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal">$1</li>')
+    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+    .replace(/@(\w+)/g, '<span class="text-primary-500 font-medium">@$1</span>')
+    .replace(/\n/g, '<br/>');
+}
+
+// ==================== Formatting Toolbar ====================
+
+interface ToolbarProps {
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  setText: (val: string) => void;
+  compact?: boolean;
+}
+
+const FormattingToolbar: React.FC<ToolbarProps> = ({ textareaRef, setText, compact }) => {
+  const handle = (format: string) => {
+    if (textareaRef.current) {
+      applyFormatting(textareaRef.current, format, setText);
+    }
+  };
+
+  const btnClass = compact
+    ? 'p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+    : 'p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors';
+  const iconSize = compact ? 'w-3.5 h-3.5' : 'w-4 h-4';
+
+  return (
+    <div className="flex items-center gap-0.5 flex-wrap">
+      <button type="button" className={btnClass} onClick={() => handle('bold')} title="Bold (**text**)">
+        <Bold className={iconSize} />
+      </button>
+      <button type="button" className={btnClass} onClick={() => handle('italic')} title="Italic (*text*)">
+        <Italic className={iconSize} />
+      </button>
+      <button type="button" className={btnClass} onClick={() => handle('underline')} title="Underline (__text__)">
+        <Underline className={iconSize} />
+      </button>
+      <button type="button" className={btnClass} onClick={() => handle('strikethrough')} title="Strikethrough (~~text~~)">
+        <Strikethrough className={iconSize} />
+      </button>
+      <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-0.5" />
+      <button type="button" className={btnClass} onClick={() => handle('code')} title="Code (`code`)">
+        <Code className={iconSize} />
+      </button>
+      <button type="button" className={btnClass} onClick={() => handle('link')} title="Link ([text](url))">
+        <Link2 className={iconSize} />
+      </button>
+      <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-0.5" />
+      <button type="button" className={btnClass} onClick={() => handle('list')} title="Bullet List">
+        <ListIcon className={iconSize} />
+      </button>
+      <button type="button" className={btnClass} onClick={() => handle('ordered-list')} title="Numbered List">
+        <ListOrdered className={iconSize} />
+      </button>
+      <button type="button" className={btnClass} onClick={() => handle('quote')} title="Quote (> text)">
+        <Quote className={iconSize} />
+      </button>
+      <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-0.5" />
+      <button type="button" className={btnClass} onClick={() => handle('mention')} title="Mention (@user)">
+        <AtSign className={iconSize} />
+      </button>
+    </div>
+  );
+};
+
+// ==================== Status Colors ====================
+
+const LIST_COLORS = [
+  '#6b7280', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6',
+  '#ef4444', '#ec4899', '#06b6d4', '#f97316', '#14b8a6',
+];
+
+function getListColor(index: number): { color: string; bg: string } {
+  const c = LIST_COLORS[Math.max(0, index) % LIST_COLORS.length];
+  return { color: c, bg: c + '1a' };
+}
+
+// ==================== Component Props ====================
 
 interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: Task | null;
   boardLabels: Label[];
+  boardMembers?: BoardMember[];
+  boardLists?: List[];
 }
 
 export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
@@ -30,11 +218,15 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   onClose,
   task: initialTask,
   boardLabels,
+  boardMembers = [],
+  boardLists = [],
 }) => {
-  const { updateTask, deleteTask } = useBoardStore();
+  const { updateTask, deleteTask, moveTask } = useBoardStore();
   const { user: currentUser } = useAuthStore();
   const contentRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const descTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [task, setTask] = useState<Task | null>(initialTask);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -43,9 +235,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [editDesc, setEditDesc] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showAssigneeSearch, setShowAssigneeSearch] = useState(false);
-  const [assigneeQuery, setAssigneeQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [chatMessage, setChatMessage] = useState('');
   const [submittingChat, setSubmittingChat] = useState(false);
@@ -146,16 +336,16 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     setShowDeleteConfirm(false);
   };
 
-  const handleSearchUsers = async (query: string) => {
-    setAssigneeQuery(query);
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
+  const handleStatusChange = async (targetListId: string) => {
     try {
-      const { data } = await authApi.searchUsers(query);
-      setSearchResults(data.data);
-    } catch {}
+      await moveTask(task.id, targetListId, 0);
+      const targetList = boardLists.find(l => l.id === targetListId);
+      setTask(prev => prev ? { ...prev, listId: targetListId, list: targetList ? { id: targetList.id, title: targetList.title, boardId: targetList.boardId } : prev.list } : null);
+      setShowStatusDropdown(false);
+      toast.success(`Moved to ${targetList?.title || 'list'}`);
+    } catch {
+      toast.error('Failed to move task');
+    }
   };
 
   const handleAddAssignee = async (userId: string) => {
@@ -163,8 +353,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       await taskApi.addAssignee(task.id, userId);
       const { data } = await taskApi.getTask(task.id);
       setTask(data.data);
-      setShowAssigneeSearch(false);
-      setAssigneeQuery('');
+      setShowAssigneeDropdown(false);
       toast.success('Assignee added');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to add assignee');
@@ -231,15 +420,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const priorityConfig = PRIORITIES[task.priority as keyof typeof PRIORITIES] || PRIORITIES.medium;
   const assignedLabelIds = task.labels?.map((l) => l.labelId) || [];
   const availableLabels = boardLabels.filter((l) => !assignedLabelIds.includes(l.id));
-
-  const statusOptions = [
-    { value: 'todo', label: 'To Do', color: '#6b7280', bg: '#f3f4f6' },
-    { value: 'in-progress', label: 'In Progress', color: '#3b82f6', bg: '#dbeafe' },
-    { value: 'review', label: 'Review', color: '#f59e0b', bg: '#fef3c7' },
-    { value: 'done', label: 'Done', color: '#10b981', bg: '#d1fae5' },
-  ];
+  const assignedUserIds = task.assignees?.map(a => a.userId) || [];
+  const availableMembers = boardMembers.filter(m => !assignedUserIds.includes(m.userId));
 
   const currentList = task.list?.title || 'Unknown';
+  const currentListId = task.listId;
+  const currentListIdx = boardLists.findIndex(l => l.id === currentListId);
+  const currentListColor = getListColor(currentListIdx >= 0 ? currentListIdx : 0);
 
   return (
     <>
@@ -327,13 +514,43 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     <div className="relative">
                       <button
                         onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                        style={{ backgroundColor: statusOptions.find(s => s.label.toLowerCase().replace(' ', '-').includes(currentList.toLowerCase().replace(' ', '-')))?.bg || '#f3f4f6',
-                                 color: statusOptions.find(s => s.label.toLowerCase().replace(' ', '-').includes(currentList.toLowerCase().replace(' ', '-')))?.color || '#6b7280' }}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
+                        style={{ backgroundColor: currentListColor.bg, color: currentListColor.color }}
                       >
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentListColor.color }} />
                         {currentList}
-                        <ChevronDown className="w-3 h-3" />
+                        <ChevronDown className={`w-3 h-3 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
                       </button>
+                      {showStatusDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setShowStatusDropdown(false)} />
+                          <div className="absolute left-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 z-20 animate-scale-in">
+                            <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Move to</div>
+                            {boardLists.map((list, idx) => {
+                              const color = getListColor(idx);
+                              const isCurrent = list.id === currentListId;
+                              return (
+                                <button
+                                  key={list.id}
+                                  onClick={() => !isCurrent && handleStatusChange(list.id)}
+                                  className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full transition-colors ${
+                                    isCurrent
+                                      ? 'bg-gray-50 dark:bg-gray-700/50 font-semibold cursor-default'
+                                      : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                  }`}
+                                >
+                                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color.color }} />
+                                  <span className="text-gray-700 dark:text-gray-300">{list.title}</span>
+                                  {isCurrent && <Check className="w-3.5 h-3.5 ml-auto text-green-500" />}
+                                </button>
+                              );
+                            })}
+                            {boardLists.length === 0 && (
+                              <div className="px-3 py-2 text-xs text-gray-400">No lists available</div>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -392,46 +609,43 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                           </button>
                         </div>
                       ))}
-                      {showAssigneeSearch ? (
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={assigneeQuery}
-                            onChange={(e) => handleSearchUsers(e.target.value)}
-                            placeholder="Search users..."
-                            className="text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 w-40"
-                            autoFocus
-                          />
-                          {searchResults.length > 0 && (
-                            <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10 max-h-32 overflow-y-auto">
-                              {searchResults.map((u) => (
-                                <button
-                                  key={u.id}
-                                  onClick={() => handleAddAssignee(u.id)}
-                                  className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 w-full"
-                                >
-                                  <Avatar name={u.name} size="xs" avatar={u.avatar} />
-                                  <span className="truncate">{u.name}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          <button
-                            onClick={() => { setShowAssigneeSearch(false); setAssigneeQuery(''); setSearchResults([]); }}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-gray-400"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
+                      <div className="relative">
                         <button
-                          onClick={() => setShowAssigneeSearch(true)}
+                          onClick={() => setShowAssigneeDropdown(!showAssigneeDropdown)}
                           className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary-500 transition-colors px-2 py-1 border border-dashed border-gray-300 dark:border-gray-600 rounded-full"
                         >
                           <Plus className="w-3 h-3" />
                           Add
                         </button>
-                      )}
+                        {showAssigneeDropdown && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setShowAssigneeDropdown(false)} />
+                            <div className="absolute left-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 z-20 animate-scale-in">
+                              <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Board Members</div>
+                              {availableMembers.length > 0 ? (
+                                availableMembers.map((member) => (
+                                  <button
+                                    key={member.id}
+                                    onClick={() => handleAddAssignee(member.userId)}
+                                    className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 w-full transition-colors"
+                                  >
+                                    <Avatar name={member.user.name} size="xs" avatar={member.user.avatar} />
+                                    <div className="text-left min-w-0">
+                                      <div className="text-xs font-medium truncate">{member.user.name}</div>
+                                      <div className="text-[10px] text-gray-400 truncate">{member.user.email}</div>
+                                    </div>
+                                    <span className="ml-auto text-[10px] text-gray-400 capitalize">{member.role}</span>
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-3 text-center">
+                                  <p className="text-xs text-gray-400">All members assigned</p>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -458,7 +672,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                           Add
                         </button>
                         {showLabelPicker && availableLabels.length > 0 && (
-                          <div className="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10 max-h-40 overflow-y-auto">
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setShowLabelPicker(false)} />
+                            <div className="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20 max-h-40 overflow-y-auto">
                             {availableLabels.map((label) => (
                               <button
                                 key={label.id}
@@ -469,7 +685,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                 {label.name}
                               </button>
                             ))}
-                          </div>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -497,35 +714,17 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   </div>
                   {isEditingDesc ? (
                     <div>
-                      {/* Simple toolbar */}
-                      <div className="flex items-center gap-1 p-1.5 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-lg bg-gray-50 dark:bg-gray-800">
-                        <button className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" title="Bold">
-                          <Bold className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" title="Italic">
-                          <Italic className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" title="Link">
-                          <Link2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" title="List">
-                          <List className="w-3.5 h-3.5" />
-                        </button>
-                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <button className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" title="Mention">
-                          <AtSign className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" title="Attach">
-                          <Paperclip className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="p-1.5 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-lg bg-gray-50 dark:bg-gray-800">
+                        <FormattingToolbar textareaRef={descTextareaRef} setText={setEditDesc} />
                       </div>
                       <textarea
+                        ref={descTextareaRef}
                         value={editDesc}
                         onChange={(e) => setEditDesc(e.target.value)}
                         rows={6}
-                        className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-b-lg px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                        className="w-full text-sm border border-gray-200 dark:border-gray-700 border-t-0 rounded-b-lg px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-mono"
                         autoFocus
-                        placeholder="Add a detailed description, links, or notes..."
+                        placeholder="Add a detailed description... Use **bold**, *italic*, `code`, - lists, > quotes"
                       />
                       <div className="flex gap-2 mt-2">
                         <Button size="sm" onClick={handleSaveDescription}>Save</Button>
@@ -538,9 +737,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                       className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-h-[80px] border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
                     >
                       {task.description ? (
-                        <div className="whitespace-pre-wrap">{task.description}</div>
+                        <div
+                          className="prose prose-sm dark:prose-invert max-w-none"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(task.description) }}
+                        />
                       ) : (
-                        <span className="text-gray-400 dark:text-gray-500 italic">Click to add a description, links, or notes...</span>
+                        <span className="text-gray-400 dark:text-gray-500 italic">Click to add a description... Use markdown for formatting</span>
                       )}
                     </div>
                   )}
@@ -613,7 +815,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                               ? 'bg-primary-500 text-white rounded-br-md'
                               : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-600 rounded-bl-md'
                           }`}>
-                            <p className="whitespace-pre-wrap break-words text-left">{comment.content}</p>
+                            <div
+                              className="whitespace-pre-wrap break-words text-left prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.content) }}
+                            />
                           </div>
                         </div>
                       </div>
@@ -627,23 +832,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               <div className="p-3 border-t border-gray-100 dark:border-gray-800">
                 <form onSubmit={handleSendChat}>
                   <div className="relative">
-                    {/* Formatting toolbar - mini */}
-                    <div className="flex items-center gap-0.5 px-2 py-1">
-                      <button type="button" className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" title="Bold">
-                        <Bold className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" title="Italic">
-                        <Italic className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" title="Mention">
-                        <AtSign className="w-3.5 h-3.5" />
-                      </button>
-                      <button type="button" className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" title="Attach">
-                        <Paperclip className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    <FormattingToolbar textareaRef={chatTextareaRef} setText={setChatMessage} compact />
                     <div className="flex items-end gap-2">
                       <textarea
+                        ref={chatTextareaRef}
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}
                         placeholder="Type a message..."

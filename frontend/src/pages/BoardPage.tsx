@@ -169,6 +169,8 @@ const BoardPage: React.FC = () => {
         onClose={() => setSelectedTask(null)}
         task={selectedTask}
         boardLabels={boardLabels}
+        boardMembers={board.members || []}
+        boardLists={lists}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '../common/Button';
 import { useBoardStore } from '../../store/boardStore';
-import { X } from 'lucide-react';
+import { X, Flag } from 'lucide-react';
+import { PRIORITIES } from '../../constants';
 import toast from 'react-hot-toast';
 
 interface CreateTaskFormProps {
@@ -11,6 +12,7 @@ interface CreateTaskFormProps {
 
 export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ listId, onClose }) => {
   const [title, setTitle] = useState('');
+  const [priority, setPriority] = useState('none');
   const [isLoading, setIsLoading] = useState(false);
   const { createTask } = useBoardStore();
 
@@ -20,8 +22,13 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ listId, onClose 
 
     setIsLoading(true);
     try {
-      await createTask(listId, { title: title.trim() });
+      const taskData: { title: string; priority?: string } = { title: title.trim() };
+      if (priority !== 'none') {
+        taskData.priority = priority;
+      }
+      await createTask(listId, taskData);
       setTitle('');
+      setPriority('none');
       onClose();
     } catch {
       toast.error('Failed to create task');
@@ -47,7 +54,31 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ listId, onClose 
           if (e.key === 'Escape') onClose();
         }}
       />
-      <div className="flex items-center gap-2 mt-2">
+      {/* Priority selector */}
+      <div className="flex items-center gap-1 mt-1.5 mb-2">
+        <span className="text-[10px] text-gray-400 mr-1 uppercase tracking-wide">Priority:</span>
+        {Object.entries(PRIORITIES).map(([key, val]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setPriority(priority === key ? 'none' : key)}
+            className={`flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded transition-all ${
+              priority === key
+                ? 'font-semibold ring-1 ring-current/20 shadow-sm'
+                : 'opacity-50 hover:opacity-80'
+            }`}
+            style={{
+              color: val.color,
+              backgroundColor: priority === key ? val.bg : 'transparent',
+            }}
+            title={val.label}
+          >
+            <Flag className="w-2.5 h-2.5" />
+            {val.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
         <Button type="submit" size="sm" isLoading={isLoading}>
           Add Task
         </Button>
