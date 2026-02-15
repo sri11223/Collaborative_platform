@@ -40,12 +40,12 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({ board, onInvite }) => 
 
   return (
     <>
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/')}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={() => navigate('/dashboard')}
+              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -54,7 +54,7 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({ board, onInvite }) => 
                 className="w-3.5 h-3.5 rounded-sm"
                 style={{ backgroundColor: board.color }}
               />
-              <h1 className="text-lg font-semibold text-gray-900">{board.title}</h1>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{board.title}</h1>
             </div>
           </div>
 

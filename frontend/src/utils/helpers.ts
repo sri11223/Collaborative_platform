@@ -40,7 +40,7 @@ export function getAvatarColor(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function cn(...classes: (string | undefined | null | false)[]): string {
+export function cn(...classes: (string | number | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 

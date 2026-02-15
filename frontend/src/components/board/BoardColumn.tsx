@@ -55,7 +55,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({ list, index, onTaskCli
           {...provided.draggableProps}
           className="flex-shrink-0 w-80"
         >
-          <div className="bg-gray-100 rounded-xl p-3 max-h-[calc(100vh-180px)] flex flex-col">
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-xl p-3 max-h-[calc(100vh-180px)] flex flex-col">
             {/* List Header */}
             <div
               {...provided.dragHandleProps}
@@ -79,7 +79,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({ list, index, onTaskCli
                 />
               ) : (
                 <h3
-                  className="text-sm font-semibold text-gray-700 cursor-pointer hover:text-gray-900"
+                  className="text-sm font-semibold text-gray-700 dark:text-gray-200 cursor-pointer hover:text-gray-900 dark:hover:text-white"
                   onClick={() => setIsEditing(true)}
                 >
                   {list.title}
@@ -103,7 +103,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({ list, index, onTaskCli
                       className="fixed inset-0 z-10"
                       onClick={() => setShowMenu(false)}
                     />
-                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 animate-slide-in">
+                    <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20 animate-slide-in">
                       <button
                         onClick={() => {
                           setIsEditing(true);
@@ -131,13 +131,13 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({ list, index, onTaskCli
             </div>
 
             {/* Task List */}
-            <Droppable droppableId={list.id} type="task">
+            <Droppable droppableId={list.id} type="TASK">
               {(provided, snapshot) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                   className={`flex-1 overflow-y-auto space-y-2 min-h-[40px] kanban-column p-0.5 rounded-lg transition-colors ${
-                    snapshot.isDraggingOver ? 'bg-primary-50' : ''
+                    snapshot.isDraggingOver ? 'bg-primary-50 dark:bg-primary-900/20' : ''
                   }`}
                 >
                   {list.tasks?.map((task, taskIndex) => (

@@ -19,7 +19,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all duration-200 group"
+      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 group"
     >
       {/* Labels */}
       {task.labels && task.labels.length > 0 && (
@@ -36,7 +36,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
       )}
 
       {/* Title */}
-      <h4 className="text-sm font-medium text-gray-900 mb-2 group-hover:text-primary-700 transition-colors">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2 group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-colors">
         {task.title}
       </h4>
 
