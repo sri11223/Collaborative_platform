@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedBoards  Board[]
+  memberships  BoardMember[]
+  assignments  TaskAssignee[]
+  activities   Activity[]
+  comments     Comment[]
+  invitations  Invitation[] @relation("InviterRelation")
+
+  @@index([email])
+}
+
+model Board {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  color       String   @default("#6366f1")
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lists       List[]
+  members     BoardMember[]
+  activities  Activity[]
+  labels      Label[]
+  invitations Invitation[]
+
+  @@index([ownerId])
+}
+
+model BoardMember {
+  id       String   @id @default(cuid())
+  board    Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId  String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  role     String   @default("member")
+  joinedAt DateTime @default(now())
+
+  @@unique([boardId, userId])
+  @@index([boardId])
+  @@index([userId])
+}
+
+model List {
+  id        String   @id @default(cuid())
+  title     String
+  position  Int
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks Task[]
+
+  @@index([boardId])
+  @@index([position])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  position    Int
+  priority    String    @default("medium")
+  dueDate     DateTime?
+  list        List      @relation(fields: [listId], references: [id], onDelete: Cascade)
+  listId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  assignees  TaskAssignee[]
+  labels     TaskLabel[]
+  comments   Comment[]
+  activities Activity[]
+
+  @@index([listId])
+  @@index([position])
+  @@index([priority])
+}
+
+model TaskAssignee {
+  id         String   @id @default(cuid())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  assignedAt DateTime @default(now())
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+}
+
+model Label {
+  id      String @id @default(cuid())
+  name    String
+  color   String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId String
+
+  tasks TaskLabel[]
+
+  @@index([boardId])
+}
+
+model TaskLabel {
+  id      String @id @default(cuid())
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId  String
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  labelId String
+
+  @@unique([taskId, labelId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String
+  description String
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId     String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  taskId      String?
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  @@index([boardId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Invitation {
+  id           String   @id @default(cuid())
+  board        Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId      String
+  inviter      User     @relation("InviterRelation", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviterId    String
+  inviteeEmail String
+  role         String   @default("member")
+  status       String   @default("pending")
+  token        String   @unique @default(cuid())
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@index([boardId])
+  @@index([inviteeEmail])
+  @@index([token])
+}
