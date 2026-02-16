@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { invitationService } from '../services/invitation.service';
 import { notificationService } from '../services/notification.service';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 export class InvitationController {
   async createInvitation(req: Request, res: Response, next: NextFunction) {

@@ -1,4 +1,4 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../utils/errors';
 
 export class BoardService {

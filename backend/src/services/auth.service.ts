@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { generateToken } from '../utils/jwt';
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors';
 import { config } from '../config';

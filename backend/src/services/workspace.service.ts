@@ -1,4 +1,4 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { NotFoundError, ForbiddenError, ConflictError } from '../utils/errors';
 
 export class WorkspaceService {

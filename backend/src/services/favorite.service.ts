@@ -1,4 +1,4 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { NotFoundError, ConflictError, ForbiddenError } from '../utils/errors';
 
 export class FavoriteService {

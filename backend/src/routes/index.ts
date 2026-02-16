@@ -292,4 +292,9 @@ export function setupRoutes(app: Express) {
   });
 
   app.use('/api', router);
+
+  // Root /api — redirect to Swagger docs
+  app.get('/api', (_req, res) => {
+    res.redirect('/api-docs');
+  });
 }

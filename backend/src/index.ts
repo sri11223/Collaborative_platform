@@ -4,13 +4,15 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { PrismaClient } from '@prisma/client';
+import swaggerUi from 'swagger-ui-express';
+import { prisma } from './lib/prisma';
 import { config } from './config';
+import { swaggerSpec } from './config/swagger';
 import { errorHandler } from './middleware/errorHandler';
 import { setupRoutes } from './routes';
 import { setupSocket } from './socket';
 
-export const prisma = new PrismaClient();
+export { prisma };
 
 const app = express();
 const httpServer = createServer(app);
@@ -28,6 +30,13 @@ app.use(cors({ origin: config.clientUrl, credentials: true }));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
+
+// Swagger API docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'TaskFlow API Documentation',
+}));
+app.get('/api-docs.json', (_req, res) => res.json(swaggerSpec));
 
 // Make io accessible to routes
 app.set('io', io);

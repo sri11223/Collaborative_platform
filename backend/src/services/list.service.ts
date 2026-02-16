@@ -1,4 +1,4 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { NotFoundError, ConflictError } from '../utils/errors';
 import { boardService } from './board.service';
 
