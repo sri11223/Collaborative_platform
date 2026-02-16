@@ -16,6 +16,31 @@ export const Avatar: React.FC<AvatarProps> = ({ name, avatar, size = 'md', class
     lg: 'w-12 h-12 text-base',
   };
 
+  const emojiSizes = {
+    xs: 'text-sm',
+    sm: 'text-lg',
+    md: 'text-xl',
+    lg: 'text-2xl',
+  };
+
+  // Check if avatar is an emoji (short string, not a URL)
+  const isEmoji = avatar && !avatar.startsWith('http') && !avatar.startsWith('/') && avatar.length <= 4;
+
+  if (isEmoji) {
+    return (
+      <div
+        className={cn(
+          'rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800',
+          sizes[size],
+          className
+        )}
+        title={name}
+      >
+        <span className={emojiSizes[size]}>{avatar}</span>
+      </div>
+    );
+  }
+
   if (avatar) {
     return (
       <img

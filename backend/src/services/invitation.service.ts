@@ -3,6 +3,7 @@ import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors';
 import { boardService } from './board.service';
 import { activityService } from './activity.service';
 import { sendEmail, buildInviteEmail } from '../utils/email';
+import { config } from '../config';
 
 export class InvitationService {
   async createInvitation(
@@ -42,8 +43,7 @@ export class InvitationService {
     });
 
     // Send invitation email
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const inviteLink = `${frontendUrl}/invite/${invitation.token}`;
+    const inviteLink = `${config.clientUrl}/invite/${invitation.token}`;
     const emailContent = buildInviteEmail({
       inviterName: invitation.inviter.name,
       boardTitle: invitation.board.title,
@@ -96,6 +96,18 @@ export class InvitationService {
         role: invitation.role,
       },
     });
+
+    // Also add user to the board's workspace if not already a member
+    if (invitation.board.workspaceId) {
+      const existingWsMember = await prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: invitation.board.workspaceId, userId } },
+      });
+      if (!existingWsMember) {
+        await prisma.workspaceMember.create({
+          data: { workspaceId: invitation.board.workspaceId, userId, role: 'member' },
+        });
+      }
+    }
 
     await prisma.invitation.update({
       where: { id: invitationId },
@@ -185,6 +197,19 @@ export class InvitationService {
     await prisma.boardMember.create({
       data: { boardId: invitation.boardId, userId, role: invitation.role },
     });
+
+    // Also add user to the board's workspace if not already a member
+    if (invitation.board.workspaceId) {
+      const existingWsMember = await prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: invitation.board.workspaceId, userId } },
+      });
+      if (!existingWsMember) {
+        await prisma.workspaceMember.create({
+          data: { workspaceId: invitation.board.workspaceId, userId, role: 'member' },
+        });
+      }
+    }
+
     await prisma.invitation.update({ where: { token }, data: { status: 'accepted' } });
 
     await activityService.log({

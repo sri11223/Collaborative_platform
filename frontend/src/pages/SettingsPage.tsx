@@ -24,6 +24,8 @@ const SettingsPage: React.FC = () => {
   // Profile form state
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profileEmail, setProfileEmail] = useState(user?.email || '');
+  const [profileAvatar, setProfileAvatar] = useState(user?.avatar || '');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Workspace form state
@@ -46,6 +48,7 @@ const SettingsPage: React.FC = () => {
     if (user) {
       setProfileName(user.name);
       setProfileEmail(user.email);
+      setProfileAvatar(user.avatar || '');
     }
   }, [user]);
 
@@ -61,7 +64,7 @@ const SettingsPage: React.FC = () => {
     if (!profileName.trim()) return;
     setSaving(true);
     try {
-      await updateProfile({ name: profileName.trim() });
+      await updateProfile({ name: profileName.trim(), avatar: profileAvatar || undefined });
       toast.success('Profile updated!');
     } catch {
       toast.error('Failed to update profile');
@@ -165,12 +168,64 @@ const SettingsPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-5">
                 {/* Avatar */}
                 <div className="flex items-center gap-4">
-                  <Avatar name={user?.name || ''} size="lg" avatar={user?.avatar} />
+                  <div className="relative">
+                    <Avatar name={user?.name || ''} size="lg" avatar={profileAvatar || user?.avatar} />
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary-500 hover:bg-primary-600 text-white rounded-full flex items-center justify-center text-xs shadow-lg transition-colors"
+                      title="Change avatar"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </button>
+                  </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="text-xs text-primary-500 hover:text-primary-600 mt-1 transition-colors"
+                    >
+                      {showEmojiPicker ? 'Close picker' : 'Choose avatar emoji'}
+                    </button>
                   </div>
                 </div>
+
+                {/* Emoji Avatar Picker */}
+                {showEmojiPicker && (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                      Pick an Avatar Emoji
+                    </p>
+                    <div className="grid grid-cols-10 gap-1.5">
+                      {[
+                        '\u{1F600}', '\u{1F604}', '\u{1F60E}', '\u{1F60A}', '\u{1F913}', '\u{1F929}', '\u{1F970}', '\u{1F60D}', '\u{1F643}', '\u{1F642}',
+                        '\u{1F920}', '\u{1F978}', '\u{1F47B}', '\u{1F916}', '\u{1F47D}', '\u{1F4A9}', '\u{1F63A}', '\u{1F981}', '\u{1F43B}', '\u{1F436}',
+                        '\u{1F431}', '\u{1F42F}', '\u{1F98A}', '\u{1F43C}', '\u{1F428}', '\u{1F430}', '\u{1F427}', '\u{1F985}', '\u{1F680}', '\u{2B50}',
+                        '\u{1F31F}', '\u{1F525}', '\u{1F4A1}', '\u{1F3AF}', '\u{1F3AE}', '\u{1F3A8}', '\u{1F3B5}', '\u{1F48E}', '\u{1F451}', '\u{26A1}',
+                        '\u{1F308}', '\u{1F33B}', '\u{1F332}', '\u{1F335}', '\u{1F34A}', '\u{1F347}', '\u{1F353}', '\u{1F955}', '\u{1F96D}', '\u{1F369}',
+                      ].map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => { setProfileAvatar(emoji); setShowEmojiPicker(false); }}
+                          className={`w-9 h-9 text-xl rounded-lg flex items-center justify-center transition-all hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:scale-110 ${
+                            profileAvatar === emoji ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-500 scale-110' : ''
+                          }`}
+                          title={emoji}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    {profileAvatar && (
+                      <button
+                        onClick={() => { setProfileAvatar(''); }}
+                        className="mt-3 text-xs text-red-500 hover:text-red-600 transition-colors"
+                      >
+                        Remove avatar
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Name */}
                 <div>

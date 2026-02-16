@@ -15,6 +15,7 @@ export function useSocket(boardId: string | null) {
     handleListCreated,
     handleListUpdated,
     handleListDeleted,
+    fetchBoard,
   } = useBoardStore();
 
   useEffect(() => {
@@ -33,6 +34,13 @@ export function useSocket(boardId: string | null) {
     socket.on('list:updated', (list: List) => handleListUpdated(list));
     socket.on('list:deleted', (data: { listId: string }) => handleListDeleted(data));
 
+    // Refresh board data when a new member joins
+    socket.on('member:joined', (data: { boardId: string }) => {
+      if (data.boardId === boardId) {
+        fetchBoard(boardId);
+      }
+    });
+
     return () => {
       leaveBoard(boardId);
       socket.off('task:created');
@@ -42,6 +50,7 @@ export function useSocket(boardId: string | null) {
       socket.off('list:created');
       socket.off('list:updated');
       socket.off('list:deleted');
+      socket.off('member:joined');
     };
   }, [boardId]);
 

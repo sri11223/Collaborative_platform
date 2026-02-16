@@ -85,7 +85,14 @@ export class NotificationService {
 
   // ─── Notification Helpers ─────────────────────────────
 
-  async notifyTaskAssigned(taskTitle: string, assignerName: string, assigneeId: string, boardId: string, taskId: string) {
+  async notifyTaskAssigned(taskTitle: string, assignerIdOrName: string, assigneeId: string, boardId: string, taskId: string) {
+    // Resolve assigner name from ID if needed
+    let assignerName = assignerIdOrName;
+    const assignerUser = await prisma.user.findUnique({ where: { id: assignerIdOrName }, select: { name: true } });
+    if (assignerUser) {
+      assignerName = assignerUser.name;
+    }
+
     const notification = await this.createNotification({
       type: 'task_assigned',
       title: 'New Task Assignment',
