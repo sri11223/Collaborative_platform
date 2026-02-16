@@ -6,7 +6,8 @@ import {
   LayoutDashboard, ArrowRight, Zap, Shield, Users, Layers,
   CheckCircle2, Github, Star, Clock, Sparkles, Globe,
   ChevronRight, Play, Sun, Moon, GripVertical, MessageSquare,
-  UserPlus, Bell, BarChart3, Lock, Smartphone
+  UserPlus, Bell, BarChart3, Lock, Smartphone, ArrowUpRight,
+  Kanban, Check
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
@@ -14,6 +15,7 @@ const LandingPage: React.FC = () => {
   const { theme, toggleTheme } = useThemeStore();
   const [scrollY, setScrollY] = useState(0);
   const [activeFeature, setActiveFeature] = useState(0);
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
   const heroRef = useRef<HTMLDivElement>(null);
 
   if (isAuthenticated) {
@@ -33,34 +35,46 @@ const LandingPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Intersection Observer for scroll-reveal animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisibleSections((prev) => new Set(prev).add(entry.target.id));
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    document.querySelectorAll('[data-reveal]').forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   const features = [
     {
       icon: <Layers className="w-6 h-6" />,
       title: 'Kanban Boards',
       description: 'Organize tasks visually with drag-and-drop boards, lists, and cards — just like Trello.',
       color: 'from-blue-500 to-indigo-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
     },
     {
       icon: <Zap className="w-6 h-6" />,
       title: 'Real-Time Sync',
       description: 'See changes instantly with WebSocket-powered live collaboration. No refresh needed.',
       color: 'from-amber-500 to-orange-600',
-      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
     },
     {
       icon: <Users className="w-6 h-6" />,
       title: 'Team Collaboration',
       description: 'Invite members, assign tasks, and track who\'s working on what in real-time.',
       color: 'from-emerald-500 to-green-600',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
     },
     {
       icon: <Shield className="w-6 h-6" />,
       title: 'Role-Based Access',
       description: 'Control permissions with owner, admin, member, and viewer roles per board.',
       color: 'from-purple-500 to-violet-600',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
     },
   ];
 
@@ -82,6 +96,30 @@ const LandingPage: React.FC = () => {
     { icon: <Smartphone className="w-5 h-5" />, text: 'Responsive Design' },
   ];
 
+  const testimonials = [
+    {
+      name: 'Sarah Johnson',
+      role: 'Product Manager',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+      text: 'TaskFlow transformed how our team manages sprints. The real-time sync is incredibly smooth.',
+    },
+    {
+      name: 'Mike Chen',
+      role: 'Tech Lead',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
+      text: 'The drag-and-drop Kanban boards make it easy to visualize progress at a glance.',
+    },
+    {
+      name: 'Emily Rodriguez',
+      role: 'Designer',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
+      text: 'Clean, intuitive interface. I love how easy it is to organize tasks and collaborate with my team.',
+    },
+  ];
+
+  const revealClass = (id: string) =>
+    `transition-all duration-700 ${visibleSections.has(id) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`;
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 overflow-x-hidden transition-colors">
       {/* ===== Navbar ===== */}
@@ -90,7 +128,7 @@ const LandingPage: React.FC = () => {
           backgroundColor: scrollY > 50 
             ? theme === 'dark' ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.92)'
             : 'transparent',
-          backdropFilter: scrollY > 50 ? 'blur(12px)' : 'none',
+          backdropFilter: scrollY > 50 ? 'blur(16px) saturate(180%)' : 'none',
           borderBottom: scrollY > 50 ? '1px solid' : 'none',
           borderColor: theme === 'dark' ? 'rgba(55,65,81,0.5)' : 'rgba(229,231,235,0.5)',
         }}
@@ -105,6 +143,12 @@ const LandingPage: React.FC = () => {
                 Task<span className="text-primary-500">Flow</span>
               </span>
             </Link>
+
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Features</a>
+              <a href="#capabilities" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Capabilities</a>
+              <a href="#testimonials" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Testimonials</a>
+            </div>
 
             <div className="flex items-center gap-3">
               <button
@@ -130,38 +174,45 @@ const LandingPage: React.FC = () => {
         </div>
       </nav>
 
-      {/* ===== Hero Section with Parallax ===== */}
+      {/* ===== Hero Section with Enhanced Parallax ===== */}
       <section ref={heroRef} className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
-        {/* Animated background */}
+        {/* Animated background orbs */}
         <div className="absolute inset-0 overflow-hidden">
           <div
-            className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full opacity-20 dark:opacity-10"
+            className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full opacity-20 dark:opacity-10"
             style={{
               background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)',
-              transform: `translate(${scrollY * 0.05}px, ${scrollY * -0.08}px)`,
+              transform: `translate(${scrollY * 0.06}px, ${scrollY * -0.1}px) rotate(${scrollY * 0.02}deg)`,
             }}
           />
           <div
-            className="absolute -bottom-20 -left-40 w-[500px] h-[500px] rounded-full opacity-15 dark:opacity-10"
+            className="absolute -bottom-20 -left-40 w-[600px] h-[600px] rounded-full opacity-15 dark:opacity-10"
             style={{
               background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)',
-              transform: `translate(${scrollY * -0.03}px, ${scrollY * 0.05}px)`,
+              transform: `translate(${scrollY * -0.04}px, ${scrollY * 0.06}px) rotate(${scrollY * -0.01}deg)`,
             }}
           />
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-5"
+            className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full opacity-5"
             style={{
               background: 'radial-gradient(circle, #06b6d4 0%, transparent 60%)',
-              transform: `translate(-50%, -50%) scale(${1 + scrollY * 0.0005})`,
+              transform: `translate(-50%, 0%) scale(${1 + scrollY * 0.0003})`,
             }}
           />
-          {/* Grid pattern */}
+          <div
+            className="absolute top-20 left-20 w-[300px] h-[300px] rounded-full opacity-10 dark:opacity-5"
+            style={{
+              background: 'radial-gradient(circle, #ec4899 0%, transparent 70%)',
+              transform: `translate(${scrollY * 0.08}px, ${scrollY * 0.03}px)`,
+            }}
+          />
+          {/* Grid pattern with parallax */}
           <div
             className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
             style={{
               backgroundImage: `linear-gradient(rgba(99,102,241,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.3) 1px, transparent 1px)`,
               backgroundSize: '64px 64px',
-              transform: `translateY(${scrollY * 0.1}px)`,
+              transform: `translateY(${scrollY * 0.12}px)`,
             }}
           />
         </div>
@@ -169,36 +220,40 @@ const LandingPage: React.FC = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-sm font-medium mb-8 border border-primary-200 dark:border-primary-800 animate-fade-in">
-              <Sparkles className="w-4 h-4" />
+            <div
+              className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-sm font-medium mb-8 border border-primary-200 dark:border-primary-800"
+              style={{
+                opacity: Math.max(0, 1 - scrollY * 0.003),
+                transform: `translateY(${scrollY * -0.08}px)`,
+              }}
+            >
+              <Sparkles className="w-4 h-4 animate-pulse" />
               Real-Time Collaboration Platform
+              <ArrowUpRight className="w-3.5 h-3.5" />
             </div>
 
             <h1
-              className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 animate-fade-in"
-              style={{ transform: `translateY(${scrollY * -0.15}px)` }}
+              className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6"
+              style={{ transform: `translateY(${scrollY * -0.18}px)` }}
             >
               <span className="block">Manage Tasks</span>
-              <span className="block bg-gradient-to-r from-primary-600 via-purple-500 to-pink-500 text-transparent bg-clip-text">
+              <span className="block bg-gradient-to-r from-primary-600 via-purple-500 to-pink-500 text-transparent bg-clip-text animate-gradient-x">
                 Together, Seamlessly.
               </span>
             </h1>
 
             <p
-              className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in"
-              style={{
-                transform: `translateY(${scrollY * -0.1}px)`,
-                animationDelay: '0.1s',
-              }}
+              className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+              style={{ transform: `translateY(${scrollY * -0.12}px)` }}
             >
-              The collaborative task management platform with real-time sync, 
-              drag-and-drop kanban boards, and seamless team workflows. 
+              The collaborative task management platform with real-time sync,
+              drag-and-drop kanban boards, and seamless team workflows.
               Built for teams that move fast.
             </p>
 
             <div
-              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in"
-              style={{ animationDelay: '0.2s' }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+              style={{ transform: `translateY(${scrollY * -0.06}px)` }}
             >
               <Link
                 to="/signup"
@@ -219,8 +274,12 @@ const LandingPage: React.FC = () => {
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto mb-16">
               {stats.map((stat, i) => (
-                <div key={i} className="text-center">
-                  <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                <div
+                  key={i}
+                  className="text-center group"
+                  style={{ transform: `translateY(${scrollY * -0.03 * (i + 1)}px)` }}
+                >
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                     {stat.value}
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{stat.label}</div>
@@ -229,10 +288,10 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Hero Image - Kanban Board Preview */}
+          {/* Hero Image - Kanban Board Preview with deeper parallax */}
           <div
             className="relative max-w-5xl mx-auto"
-            style={{ transform: `translateY(${scrollY * -0.05}px)` }}
+            style={{ transform: `translateY(${scrollY * -0.06}px)` }}
           >
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-black/30 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
               {/* Browser frame */}
@@ -267,7 +326,9 @@ const LandingPage: React.FC = () => {
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${i === 2 ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
                           {i === 2 ? 'Urgent' : 'Medium'}
                         </span>
-                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 ring-2 ring-white dark:ring-gray-800" />
+                        <div className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-gray-800 overflow-hidden">
+                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${['Ella','Jack','Ruby'][i]}`} className="w-full h-full bg-gray-100" alt="" />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -288,8 +349,8 @@ const LandingPage: React.FC = () => {
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 font-medium">High</span>
                         <div className="flex -space-x-1">
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 ring-2 ring-white dark:ring-gray-800" />
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 ring-2 ring-white dark:ring-gray-800" />
+                          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-gray-800 bg-gray-100" alt="" />
+                          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa" className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-gray-800 bg-gray-100" alt="" />
                         </div>
                       </div>
                     </div>
@@ -310,7 +371,7 @@ const LandingPage: React.FC = () => {
                       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium line-through">{t}</p>
                       <div className="flex items-center justify-between mt-2">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 ring-2 ring-white dark:ring-gray-800" />
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i === 0 ? 'Nolan' : 'Felix'}`} className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-gray-800 bg-gray-100" alt="" />
                       </div>
                     </div>
                   ))}
@@ -318,12 +379,12 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Floating elements */}
+            {/* Floating elements with DiceBear avatars */}
             <div
-              className="absolute -right-4 top-16 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 animate-fade-in hidden lg:flex items-center gap-2"
+              className="absolute -right-4 top-16 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 hidden lg:flex items-center gap-2"
               style={{
-                transform: `translateY(${scrollY * 0.08}px)`,
-                animationDelay: '0.4s',
+                transform: `translateY(${scrollY * 0.1}px)`,
+                animation: 'float 6s ease-in-out infinite',
               }}
             >
               <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -336,33 +397,50 @@ const LandingPage: React.FC = () => {
             </div>
 
             <div
-              className="absolute -left-4 bottom-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 animate-fade-in hidden lg:flex items-center gap-2"
+              className="absolute -left-4 bottom-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 hidden lg:flex items-center gap-2"
               style={{
-                transform: `translateY(${scrollY * -0.06}px)`,
-                animationDelay: '0.6s',
+                transform: `translateY(${scrollY * -0.08}px)`,
+                animation: 'float 6s ease-in-out infinite 1s',
               }}
             >
-              <div className="flex -space-x-1">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 ring-2 ring-white dark:ring-gray-800" />
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 ring-2 ring-white dark:ring-gray-800" />
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 ring-2 ring-white dark:ring-gray-800" />
+              <div className="flex -space-x-1.5">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-gray-800 bg-gray-100" alt="" />
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Mike" className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-gray-800 bg-gray-100" alt="" />
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Emily" className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-gray-800 bg-gray-100" alt="" />
               </div>
               <p className="text-xs font-medium text-gray-900 dark:text-white">3 online now</p>
+            </div>
+
+            <div
+              className="absolute right-8 bottom-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 hidden lg:flex items-center gap-2"
+              style={{
+                transform: `translateY(${scrollY * 0.06}px)`,
+                animation: 'float 6s ease-in-out infinite 2s',
+              }}
+            >
+              <div className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-900 dark:text-white">Real-time sync</p>
+                <p className="text-[10px] text-gray-400">Instant updates</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ===== Features Section ===== */}
-      <section className="py-24 bg-gray-50 dark:bg-gray-900/50 relative">
+      <section id="features" className="py-24 bg-gray-50 dark:bg-gray-900/50 relative">
         <div
           className="absolute inset-0 opacity-[0.02]"
           style={{
             backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 1px)`,
             backgroundSize: '32px 32px',
+            transform: `translateY(${scrollY * 0.03}px)`,
           }}
         />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div id="sec-features" data-reveal className={`relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${revealClass('sec-features')}`}>
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Everything you need to
@@ -399,8 +477,8 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ===== Capabilities Grid ===== */}
-      <section className="py-24 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="capabilities" className="py-24 relative">
+        <div id="sec-cap" data-reveal className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${revealClass('sec-cap')}`}>
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Packed with 
@@ -455,6 +533,64 @@ const LandingPage: React.FC = () => {
                 </div>
                 <div className="text-sm font-semibold text-gray-900 dark:text-white">{tech.name}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">{tech.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Testimonials Section ===== */}
+      <section id="testimonials" className="py-24 bg-gray-50 dark:bg-gray-900/50 relative overflow-hidden">
+        {/* Subtle decorative orbs */}
+        <div className="absolute top-20 left-10 w-64 h-64 bg-primary-200/20 dark:bg-primary-800/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-72 h-72 bg-purple-200/20 dark:bg-purple-800/10 rounded-full blur-3xl" />
+
+        <div id="sec-testimonials" data-reveal className={`relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${revealClass('sec-testimonials')}`}>
+          <div className="text-center mb-16">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 mb-4">
+              <Star className="w-3.5 h-3.5" />
+              Loved by Teams
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              What our users <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">say</span>
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              See how teams around the world are transforming their workflow with TaskFlow
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((t, i) => (
+              <div
+                key={i}
+                className="relative bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 dark:border-gray-700/50 group"
+                style={{ transitionDelay: `${i * 100}ms` }}
+              >
+                {/* Quote mark */}
+                <div className="absolute -top-3 left-8 text-5xl font-serif text-primary-200 dark:text-primary-800 select-none">"</div>
+
+                {/* Stars */}
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 italic">
+                  "{t.text}"
+                </p>
+
+                <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                  <img
+                    src={t.avatar}
+                    alt={t.name}
+                    className="w-11 h-11 rounded-full bg-gray-100 dark:bg-gray-700 ring-2 ring-primary-100 dark:ring-primary-800 group-hover:ring-primary-300 dark:group-hover:ring-primary-600 transition-all"
+                  />
+                  <div>
+                    <div className="font-semibold text-sm">{t.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{t.role}</div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -538,6 +674,23 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Global animations */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          33% { transform: translateY(-12px) rotate(1deg); }
+          66% { transform: translateY(6px) rotate(-1deg); }
+        }
+        @keyframes gradient-x {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .animate-gradient-x {
+          background-size: 200% 200%;
+          animation: gradient-x 4s ease infinite;
+        }
+      `}</style>
     </div>
   );
 };

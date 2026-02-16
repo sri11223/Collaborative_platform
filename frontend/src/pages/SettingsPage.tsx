@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { useThemeStore } from '../store/themeStore';
 import { workspaceApi } from '../api/workspace.api';
-import { Avatar } from '../components/common/Avatar';
+import { Avatar, AVATAR_SEEDS, getDiceBearAvatar } from '../components/common/Avatar';
 import { Spinner } from '../components/common/Spinner';
 import {
   Settings, User, Palette, Bell, Shield, Globe, Moon, Sun,
@@ -25,7 +25,7 @@ const SettingsPage: React.FC = () => {
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profileEmail, setProfileEmail] = useState(user?.email || '');
   const [profileAvatar, setProfileAvatar] = useState(user?.avatar || '');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Workspace form state
@@ -171,7 +171,7 @@ const SettingsPage: React.FC = () => {
                   <div className="relative">
                     <Avatar name={user?.name || ''} size="lg" avatar={profileAvatar || user?.avatar} />
                     <button
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      onClick={() => setShowAvatarPicker(!showAvatarPicker)}
                       className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary-500 hover:bg-primary-600 text-white rounded-full flex items-center justify-center text-xs shadow-lg transition-colors"
                       title="Change avatar"
                     >
@@ -182,39 +182,39 @@ const SettingsPage: React.FC = () => {
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
                     <button
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      onClick={() => setShowAvatarPicker(!showAvatarPicker)}
                       className="text-xs text-primary-500 hover:text-primary-600 mt-1 transition-colors"
                     >
-                      {showEmojiPicker ? 'Close picker' : 'Choose avatar emoji'}
+                      {showAvatarPicker ? 'Close picker' : 'Choose avatar'}
                     </button>
                   </div>
                 </div>
 
-                {/* Emoji Avatar Picker */}
-                {showEmojiPicker && (
+                {/* DiceBear Avatar Picker */}
+                {showAvatarPicker && (
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                      Pick an Avatar Emoji
+                      Choose Your Avatar
                     </p>
-                    <div className="grid grid-cols-10 gap-1.5">
-                      {[
-                        '\u{1F600}', '\u{1F604}', '\u{1F60E}', '\u{1F60A}', '\u{1F913}', '\u{1F929}', '\u{1F970}', '\u{1F60D}', '\u{1F643}', '\u{1F642}',
-                        '\u{1F920}', '\u{1F978}', '\u{1F47B}', '\u{1F916}', '\u{1F47D}', '\u{1F4A9}', '\u{1F63A}', '\u{1F981}', '\u{1F43B}', '\u{1F436}',
-                        '\u{1F431}', '\u{1F42F}', '\u{1F98A}', '\u{1F43C}', '\u{1F428}', '\u{1F430}', '\u{1F427}', '\u{1F985}', '\u{1F680}', '\u{2B50}',
-                        '\u{1F31F}', '\u{1F525}', '\u{1F4A1}', '\u{1F3AF}', '\u{1F3AE}', '\u{1F3A8}', '\u{1F3B5}', '\u{1F48E}', '\u{1F451}', '\u{26A1}',
-                        '\u{1F308}', '\u{1F33B}', '\u{1F332}', '\u{1F335}', '\u{1F34A}', '\u{1F347}', '\u{1F353}', '\u{1F955}', '\u{1F96D}', '\u{1F369}',
-                      ].map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => { setProfileAvatar(emoji); setShowEmojiPicker(false); }}
-                          className={`w-9 h-9 text-xl rounded-lg flex items-center justify-center transition-all hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:scale-110 ${
-                            profileAvatar === emoji ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-500 scale-110' : ''
-                          }`}
-                          title={emoji}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                    <div className="grid grid-cols-8 gap-2">
+                      {AVATAR_SEEDS.map((seed) => {
+                        const url = getDiceBearAvatar(seed);
+                        const isSelected = profileAvatar === url;
+                        return (
+                          <button
+                            key={seed}
+                            onClick={() => { setProfileAvatar(url); setShowAvatarPicker(false); }}
+                            className={`w-12 h-12 rounded-xl overflow-hidden transition-all hover:scale-110 border-2 ${
+                              isSelected
+                                ? 'border-primary-500 ring-2 ring-primary-500/30 scale-110'
+                                : 'border-transparent hover:border-primary-300 dark:hover:border-primary-600'
+                            }`}
+                            title={seed}
+                          >
+                            <img src={url} alt={seed} className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-lg" />
+                          </button>
+                        );
+                      })}
                     </div>
                     {profileAvatar && (
                       <button

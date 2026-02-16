@@ -192,12 +192,23 @@ const InviteStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 };
 
 // Step 4: Workspace Name
-const WorkspaceStep: React.FC<StepProps & { userName: string; onFinish: (name: string) => void }> = ({
+const WorkspaceStep: React.FC<StepProps & { userName: string; onFinish: (name: string) => Promise<void> | void }> = ({
   onBack,
   userName,
   onFinish,
 }) => {
   const [workspaceName, setWorkspaceName] = useState(`${userName}'s Workspace`);
+  const [creating, setCreating] = useState(false);
+
+  const handleCreate = async () => {
+    if (!workspaceName.trim() || creating) return;
+    setCreating(true);
+    try {
+      await onFinish(workspaceName);
+    } catch {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center">
@@ -222,12 +233,12 @@ const WorkspaceStep: React.FC<StepProps & { userName: string; onFinish: (name: s
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
         <Button
-          onClick={() => onFinish(workspaceName)}
+          onClick={handleCreate}
           size="lg"
           className="px-10"
-          disabled={!workspaceName.trim()}
+          disabled={!workspaceName.trim() || creating}
         >
-          Finish <Check className="w-4 h-4 ml-2" />
+          {creating ? 'Creating...' : 'Finish'} <Check className="w-4 h-4 ml-2" />
         </Button>
       </div>
     </div>
@@ -305,13 +316,28 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
   const userName = user?.name?.split(' ')[0] || 'there';
   const totalSteps = 5;
 
-  const handleFinish = (workspaceName: string) => {
-    // Save workspace name preference
-    localStorage.setItem('taskflow_workspace_name', workspaceName);
+  const handleFinish = async (workspaceName: string) => {
+    // Actually create the workspace via API
+    try {
+      const { workspaceApi } = await import('../../api/workspace.api');
+      await workspaceApi.createWorkspace({ name: workspaceName });
+    } catch (err) {
+      console.error('Failed to create workspace during onboarding:', err);
+    }
     setStep(4); // Go to personalizing step
   };
 
-  const handleDone = () => {
+  const handleDone = async () => {
+    // If user skipped and no workspace was created yet, create a default one
+    try {
+      const { workspaceApi } = await import('../../api/workspace.api');
+      const { data } = await workspaceApi.getWorkspaces();
+      if (!data.data || data.data.length === 0) {
+        await workspaceApi.createWorkspace({ name: `${userName}'s Workspace` });
+      }
+    } catch {
+      // Non-critical, continue
+    }
     localStorage.setItem(ONBOARDING_KEY, 'true');
     onComplete();
   };

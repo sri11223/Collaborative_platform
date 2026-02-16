@@ -1,52 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { getInitials, getAvatarColor, cn } from '../../utils/helpers';
+
+/** Generate a DiceBear avataaars URL for a given seed */
+export const getDiceBearAvatar = (seed: string): string =>
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+
+/** Curated avatar seed list for the picker */
+export const AVATAR_SEEDS = [
+  'Felix', 'Aneka', 'Sarah', 'Mike', 'Emily', 'Alex', 'Lisa', 'Nolan',
+  'Luna', 'Milo', 'Aria', 'Leo', 'Zara', 'Max', 'Ivy', 'Kai',
+  'Nova', 'Finn', 'Ruby', 'Oscar', 'Ella', 'Jack', 'Chloe', 'Bear',
+  'Willow', 'Sage', 'Storm', 'Rivers', 'Jasper', 'Hazel', 'Ember', 'Atlas',
+  'Robin', 'Quinn', 'Rowan', 'Avery', 'Skyler', 'Phoenix', 'Eden', 'Scout',
+];
 
 interface AvatarProps {
   name: string;
   avatar?: string | null;
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
 export const Avatar: React.FC<AvatarProps> = ({ name, avatar, size = 'md', className }) => {
+  const [imgError, setImgError] = useState(false);
+
   const sizes = {
     xs: 'w-6 h-6 text-[10px]',
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
     lg: 'w-12 h-12 text-base',
+    xl: 'w-16 h-16 text-lg',
   };
 
-  const emojiSizes = {
-    xs: 'text-sm',
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl',
-  };
-
-  // Check if avatar is an emoji (short string, not a URL)
-  const isEmoji = avatar && !avatar.startsWith('http') && !avatar.startsWith('/') && avatar.length <= 4;
-
-  if (isEmoji) {
-    return (
-      <div
-        className={cn(
-          'rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800',
-          sizes[size],
-          className
-        )}
-        title={name}
-      >
-        <span className={emojiSizes[size]}>{avatar}</span>
-      </div>
-    );
-  }
-
-  if (avatar) {
+  if (avatar && !imgError) {
     return (
       <img
         src={avatar}
         alt={name}
-        className={cn('rounded-full object-cover', sizes[size], className)}
+        onError={() => setImgError(true)}
+        className={cn('rounded-full object-cover bg-gray-100 dark:bg-gray-800', sizes[size], className)}
       />
     );
   }

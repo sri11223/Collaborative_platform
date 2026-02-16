@@ -13,11 +13,15 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(data.password, config.bcryptRounds);
+    // Generate a DiceBear avatar using the user's first name as seed
+    const avatarSeed = data.name.split(' ')[0] || data.name;
+    const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed + Date.now().toString(36))}`;
     const user = await prisma.user.create({
       data: {
         email: data.email,
         name: data.name,
         password: hashedPassword,
+        avatar: defaultAvatar,
       },
       select: { id: true, email: true, name: true, avatar: true, createdAt: true },
     });
