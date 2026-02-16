@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useBoardStore } from '../../store/boardStore';
@@ -9,12 +9,13 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { InviteToWorkspaceModal } from '../board/InviteToWorkspaceModal';
 import { Avatar } from '../common/Avatar';
 import { favoriteApi } from '../../api/message.api';
+import { boardApi } from '../../api/board.api';
 import {
   Home, Inbox, CalendarDays, Sparkles, Users2, FileText,
   MoreHorizontal, ChevronRight, ChevronDown, Plus, Search,
   Settings, LogOut, Sun, Moon, LayoutDashboard, Bell,
   Star, MessageSquare, CheckSquare, Hash, PanelLeftClose, PanelLeft,
-  UserPlus, StarOff,
+  UserPlus, StarOff, Pencil,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -39,7 +40,7 @@ export const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
-  const { workspaces, currentWorkspace, fetchWorkspaces } = useWorkspaceStore();
+  const { workspaces, currentWorkspace, fetchWorkspaces, updateWorkspace } = useWorkspaceStore();
   const { boards, fetchBoards } = useBoardStore();
   const { unreadCount, fetchUnreadCount, initSocketListeners } = useNotificationStore();
 
@@ -51,6 +52,9 @@ export const AppSidebar: React.FC = () => {
   const [showWorkspaceInvite, setShowWorkspaceInvite] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
+  const [editingBoardTitle, setEditingBoardTitle] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchWorkspaces();
@@ -94,6 +98,34 @@ export const AppSidebar: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const startEditingBoard = (boardId: string, currentTitle: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingBoardId(boardId);
+    setEditingBoardTitle(currentTitle);
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  };
+
+  const saveEditingBoard = async () => {
+    if (!editingBoardId || !editingBoardTitle.trim()) {
+      setEditingBoardId(null);
+      return;
+    }
+    try {
+      await boardApi.updateBoard(editingBoardId, { title: editingBoardTitle.trim() });
+      fetchBoards({ page: 1, search: '', workspaceId: currentWorkspace?.id });
+      toast.success('Board renamed');
+    } catch {
+      toast.error('Failed to rename board');
+    }
+    setEditingBoardId(null);
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') saveEditingBoard();
+    if (e.key === 'Escape') setEditingBoardId(null);
   };
 
   // Boards are already filtered by workspace from the API
@@ -278,6 +310,24 @@ export const AppSidebar: React.FC = () => {
             >
               {displayBoards.length > 0 ? (
                 displayBoards.map((board, i) => (
+                  editingBoardId === board.id ? (
+                    <div key={board.id} className="flex items-center gap-2 px-2 py-1">
+                      <div
+                        className="w-5 h-5 rounded flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                        style={{ backgroundColor: board.color || BOARD_COLORS[i % BOARD_COLORS.length] }}
+                      >
+                        {editingBoardTitle.charAt(0).toUpperCase()}
+                      </div>
+                      <input
+                        ref={editInputRef}
+                        value={editingBoardTitle}
+                        onChange={(e) => setEditingBoardTitle(e.target.value)}
+                        onBlur={saveEditingBoard}
+                        onKeyDown={handleEditKeyDown}
+                        className="flex-1 text-sm bg-white dark:bg-gray-700 border border-indigo-400 rounded px-1.5 py-0.5 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+                  ) : (
                   <NavLink
                     key={board.id}
                     to={`/board/${board.id}`}
@@ -297,6 +347,13 @@ export const AppSidebar: React.FC = () => {
                     </div>
                     <span className="truncate flex-1">{board.title}</span>
                     <button
+                      onClick={(e) => startEditingBoard(board.id, board.title, e)}
+                      className="p-0.5 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-indigo-500 transition-all rounded"
+                      title="Rename board"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
                       onClick={(e) => toggleFavorite(board.id, e)}
                       className={`p-0.5 transition-all rounded ${
                         favoriteIds.has(board.id)
@@ -308,6 +365,7 @@ export const AppSidebar: React.FC = () => {
                       <Star className={`w-3 h-3 ${favoriteIds.has(board.id) ? 'fill-amber-400' : ''}`} />
                     </button>
                   </NavLink>
+                  )
                 ))
               ) : (
                 <div className="text-xs text-gray-400 dark:text-gray-500 px-2 py-2 italic">

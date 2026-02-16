@@ -7,6 +7,7 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'fallback-secret-key',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   nodeEnv: process.env.NODE_ENV || 'development',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
   bcryptRounds: 12,
   pagination: {
     defaultPage: 1,

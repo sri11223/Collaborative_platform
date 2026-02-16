@@ -14,6 +14,7 @@ import { notificationController } from '../controllers/notification.controller';
 import { documentController } from '../controllers/document.controller';
 import { messageController } from '../controllers/message.controller';
 import { favoriteController } from '../controllers/favorite.controller';
+import { aiController } from '../controllers/ai.controller';
 
 export function setupRoutes(app: Express) {
   const router = Router();
@@ -285,6 +286,28 @@ export function setupRoutes(app: Express) {
   router.post('/workspaces/:id/invite', authenticate,
     [body('email').isEmail().normalizeEmail().withMessage('Valid email required')],
     validate, workspaceController.inviteByEmail);
+
+  // ===================== AI =====================
+  router.post('/ai/generate-project', authenticate,
+    [body('workspaceId').notEmpty().withMessage('Workspace ID required'),
+     body('description').trim().isLength({ min: 5, max: 1000 }).withMessage('Description required (5-1000 chars)')],
+    validate, aiController.generateProject);
+
+  router.post('/ai/bug-report', authenticate,
+    [body('boardId').notEmpty().withMessage('Board ID required'),
+     body('description').trim().isLength({ min: 5, max: 2000 }).withMessage('Bug description required')],
+    validate, aiController.createBugReport);
+
+  router.post('/ai/breakdown', authenticate,
+    [body('boardId').notEmpty().withMessage('Board ID required'),
+     body('listId').notEmpty().withMessage('List ID required'),
+     body('parentTitle').trim().notEmpty().withMessage('Task title required'),
+     body('description').trim().isLength({ min: 3, max: 2000 }).withMessage('Description required')],
+    validate, aiController.breakdownTask);
+
+  router.get('/ai/workload/:workspaceId', authenticate, aiController.analyzeWorkload);
+  router.get('/ai/standup/:workspaceId', authenticate, aiController.generateStandup);
+  router.get('/ai/sprint/:workspaceId', authenticate, aiController.planSprint);
 
   // Health check
   router.get('/health', (_req, res) => {

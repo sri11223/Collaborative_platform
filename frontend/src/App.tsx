@@ -22,6 +22,7 @@ const InvitePage = lazy(() => import('./pages/InvitePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const DirectMessagesPage = lazy(() => import('./pages/DirectMessagesPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const AiPage = lazy(() => import('./pages/AiPage'));
 
 const App: React.FC = () => {
   const { loadUser } = useAuthStore();
@@ -74,7 +75,7 @@ const App: React.FC = () => {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/board/:id" element={<BoardPage />} />
               <Route path="/planner" element={<PlannerPage />} />
-              <Route path="/ai" element={<HomePage />} />
+              <Route path="/ai" element={<AiPage />} />
               <Route path="/teams" element={<TeamsPage />} />
               <Route path="/docs" element={<DocsPage />} />
               <Route path="/messages" element={<DirectMessagesPage />} />
