@@ -29,7 +29,7 @@ npm install
 echo VITE_API_URL=http://localhost:5000 > .env
 npm run dev                   # http://localhost:5173
 ```
-
+### see .env.examples in respctive folders.
 ### Demo Credentials (pre-seeded)
 
 | Name             | Email                          | Password  |
