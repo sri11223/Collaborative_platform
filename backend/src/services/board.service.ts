@@ -119,7 +119,7 @@ export class BoardService {
   }
 
   async updateBoard(boardId: string, data: { title?: string; description?: string; color?: string }, userId: string) {
-    await this.verifyBoardAdmin(boardId, userId);
+    await this.verifyBoardAccess(boardId, userId);
     const board = await prisma.board.update({
       where: { id: boardId },
       data,

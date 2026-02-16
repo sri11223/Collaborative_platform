@@ -40,7 +40,7 @@ export const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
-  const { workspaces, currentWorkspace, fetchWorkspaces, updateWorkspace } = useWorkspaceStore();
+  const { workspaces, currentWorkspace, fetchWorkspaces } = useWorkspaceStore();
   const { boards, fetchBoards } = useBoardStore();
   const { unreadCount, fetchUnreadCount, initSocketListeners } = useNotificationStore();
 
@@ -59,14 +59,14 @@ export const AppSidebar: React.FC = () => {
   useEffect(() => {
     fetchWorkspaces();
     fetchUnreadCount();
-    loadFavorites();
     const cleanup = initSocketListeners();
     return cleanup;
   }, [fetchWorkspaces, fetchUnreadCount, initSocketListeners]);
 
-  // Re-fetch boards when workspace changes
+  // Re-fetch boards and favorites when workspace changes
   useEffect(() => {
     fetchBoards({ page: 1, search: '', workspaceId: currentWorkspace?.id });
+    loadFavorites();
   }, [currentWorkspace?.id, fetchBoards]);
 
   const loadFavorites = async () => {
@@ -130,6 +130,10 @@ export const AppSidebar: React.FC = () => {
 
   // Boards are already filtered by workspace from the API
   const displayBoards = boards;
+
+  // Filter favorites to only show boards in the current workspace
+  const currentBoardIds = new Set(boards.map((b) => b.id));
+  const workspaceFavorites = favorites.filter((fav) => currentBoardIds.has(fav.boardId));
 
   const activeRailItem = ICON_RAIL_ITEMS.find((item) => location.pathname.startsWith(item.path));
 
@@ -226,9 +230,9 @@ export const AppSidebar: React.FC = () => {
 
       {/* ─── Expandable Sidebar Panel ─── */}
       {!collapsed && (
-        <div className="w-[260px] flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden">
+        <div className="w-[260px] flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
           {/* Workspace Switcher */}
-          <div className="px-3 pt-3 pb-2 border-b border-gray-100 dark:border-gray-800">
+          <div className="px-3 pt-3 pb-2 border-b border-gray-100 dark:border-gray-800 relative z-50">
             <WorkspaceSwitcher />
           </div>
 
@@ -250,8 +254,8 @@ export const AppSidebar: React.FC = () => {
               open={favoritesOpen}
               onToggle={() => setFavoritesOpen(!favoritesOpen)}
             >
-              {favorites.length > 0 ? (
-                favorites.map((fav) => (
+              {workspaceFavorites.length > 0 ? (
+                workspaceFavorites.map((fav) => (
                   <NavLink
                     key={fav.boardId}
                     to={`/board/${fav.boardId}`}
