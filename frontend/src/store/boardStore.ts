@@ -46,6 +46,8 @@ interface BoardState {
   handleListDeleted: (data: { listId: string }) => void;
 }
 
+let _boardFetchId = 0; // request sequencing to prevent stale responses
+
 export const useBoardStore = create<BoardState>((set, get) => ({
   boards: [],
   boardsPagination: null,
@@ -56,16 +58,21 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   // ==================== Dashboard =====================
   fetchBoards: async (params) => {
+    const requestId = ++_boardFetchId;
     set({ boardsLoading: true });
     try {
       const { data } = await boardApi.getBoards(params);
+      // Ignore stale responses — only apply the latest request
+      if (requestId !== _boardFetchId) return;
       set({
         boards: data.data.boards,
         boardsPagination: data.data.pagination,
         boardsLoading: false,
       });
     } catch {
-      set({ boardsLoading: false });
+      if (requestId === _boardFetchId) {
+        set({ boardsLoading: false });
+      }
     }
   },
 

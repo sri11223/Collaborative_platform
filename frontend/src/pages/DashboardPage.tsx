@@ -29,7 +29,8 @@ const DashboardPage: React.FC = () => {
   const debouncedSearch = useDebounce(search, 300);
 
   useEffect(() => {
-    fetchBoards({ page, search: debouncedSearch, workspaceId: currentWorkspace?.id });
+    if (!currentWorkspace?.id) return; // wait until workspace is loaded
+    fetchBoards({ page, search: debouncedSearch, workspaceId: currentWorkspace.id });
   }, [page, debouncedSearch, fetchBoards, currentWorkspace?.id]);
 
   useEffect(() => {

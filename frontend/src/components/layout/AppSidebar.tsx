@@ -65,7 +65,8 @@ export const AppSidebar: React.FC = () => {
 
   // Re-fetch boards and favorites when workspace changes
   useEffect(() => {
-    fetchBoards({ page: 1, search: '', workspaceId: currentWorkspace?.id });
+    if (!currentWorkspace?.id) return; // wait until workspace is loaded
+    fetchBoards({ page: 1, search: '', workspaceId: currentWorkspace.id });
     loadFavorites();
   }, [currentWorkspace?.id, fetchBoards]);
 

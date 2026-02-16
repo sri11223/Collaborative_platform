@@ -18,8 +18,12 @@ const TeamsPage: React.FC = () => {
 
   useEffect(() => {
     fetchWorkspaces();
-    fetchBoards({ page: 1 });
   }, []);
+
+  useEffect(() => {
+    if (!currentWorkspace?.id) return;
+    fetchBoards({ page: 1, workspaceId: currentWorkspace.id });
+  }, [currentWorkspace?.id, fetchBoards]);
 
   const toggleBoard = (id: string) => {
     setExpandedBoards((prev) => {
