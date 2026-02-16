@@ -28,13 +28,20 @@ const io = new Server(httpServer, {
 // Middleware
 app.use(cors({ origin: config.clientUrl, credentials: true }));
 app.use(helmet());
-app.use(morgan('dev'));
+// Skip logging for api-docs.json to reduce noise
+app.use(morgan('dev', {
+  skip: (req) => req.url === '/api-docs.json'
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // Swagger API docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'TaskFlow API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+  },
 }));
 app.get('/api-docs.json', (_req, res) => res.json(swaggerSpec));
 

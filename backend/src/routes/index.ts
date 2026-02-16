@@ -15,6 +15,7 @@ import { documentController } from '../controllers/document.controller';
 import { messageController } from '../controllers/message.controller';
 import { favoriteController } from '../controllers/favorite.controller';
 import { aiController } from '../controllers/ai.controller';
+import seedRouter from './seed.routes';
 
 export function setupRoutes(app: Express) {
   const router = Router();
@@ -308,6 +309,9 @@ export function setupRoutes(app: Express) {
   router.get('/ai/workload/:workspaceId', authenticate, aiController.analyzeWorkload);
   router.get('/ai/standup/:workspaceId', authenticate, aiController.generateStandup);
   router.get('/ai/sprint/:workspaceId', authenticate, aiController.planSprint);
+
+  // Admin/Utility Routes
+  router.use('', seedRouter);
 
   // Health check
   router.get('/health', (_req, res) => {
