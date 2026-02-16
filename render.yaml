@@ -13,7 +13,7 @@ services:
     runtime: node
     plan: free
     buildCommand: |
-      cd backend && sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma && npm install && npx prisma generate && npx prisma db push && npm run build
+      cd backend && sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma && npm install --production=false && npx prisma generate && npx prisma db push && npm run build
     startCommand: cd backend && npm run start
     healthCheckPath: /api-docs.json
     envVars:

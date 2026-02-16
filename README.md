@@ -20,6 +20,7 @@ Built with React, Node.js, Prisma, and Socket.IO.
 - [Architecture](#architecture)
 - [Testing](#testing)
 - [Key Design Decisions](#key-design-decisions)
+- [Deployment](#deployment)
 
 ---
 
@@ -360,6 +361,30 @@ The UI updates instantly on drag. The API call happens in the background. If it 
 
 **Room-based Socket.IO:**
 Users only receive events for boards they're currently viewing. This keeps bandwidth low and avoids processing irrelevant events.
+
+---
+
+## Deployment
+
+**📖 Full deployment guide:** [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+Deploy TaskFlow to production for **$0/month** using:
+
+| Component | Service | Details |
+|-----------|---------|---------|
+| **Database** | Render PostgreSQL | Free managed database |
+| **Backend** | Render Web Service | Node.js API + Socket.IO |
+| **Frontend** | Vercel | Global CDN with instant deploys |
+
+The `render.yaml` Blueprint auto-creates both the database and backend service. Just connect your GitHub repo and set your `GEMINI_API_KEY`.
+
+**Quick deploy:**
+1. Push to GitHub
+2. Render → New Blueprint → connect repo
+3. Vercel → Import Project → set `VITE_API_URL` and `VITE_WS_URL`
+4. Update `CLIENT_URL` in Render to your Vercel URL
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed step-by-step instructions with screenshots and troubleshooting.
 
 ---
 
