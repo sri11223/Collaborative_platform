@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { generateToken } from '../utils/jwt';
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors';
 import { config } from '../config';
+import { sendEmail, buildWelcomeEmail } from '../utils/email';
 
 export class AuthService {
   async signup(data: { email: string; name: string; password: string }) {
@@ -22,6 +23,15 @@ export class AuthService {
     });
 
     const token = generateToken({ userId: user.id, email: user.email });
+
+    // Send welcome email
+    const loginLink = `${config.clientUrl}/login`;
+    const emailContent = buildWelcomeEmail(user.name, loginLink);
+    await sendEmail({
+      to: user.email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+    }).catch(err => console.error('Welcome email failed:', err));
 
     // Auto-accept any pending invitations for this email
     const pendingInvitations = await prisma.invitation.findMany({

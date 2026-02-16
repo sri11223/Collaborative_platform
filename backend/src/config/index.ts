@@ -8,6 +8,8 @@ export const config = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   nodeEnv: process.env.NODE_ENV || 'development',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
+  sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+  sendgridFrom: process.env.SENDGRID_FROM || 'noreply@taskflow.app',
   bcryptRounds: 12,
   pagination: {
     defaultPage: 1,

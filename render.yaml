@@ -29,5 +29,9 @@ services:
         value: https://your-app.vercel.app    # ← update after Vercel deploy
       - key: GEMINI_API_KEY
         sync: false                           # set manually in Render dashboard
+      - key: SENDGRID_API_KEY
+        sync: false                           # set manually in Render dashboard
+      - key: SENDGRID_FROM
+        value: srikrishnanutalapati@gmail.com
       - key: PORT
         value: 5000

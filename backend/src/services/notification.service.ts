@@ -1,4 +1,6 @@
 import { prisma } from '../lib/prisma';
+import { sendEmail, buildTaskAssignedEmail, buildCommentEmail, buildNotificationEmail } from '../utils/email';
+import { config } from '../config';
 
 export class NotificationService {
   async createNotification(data: {
@@ -84,7 +86,7 @@ export class NotificationService {
   // ─── Notification Helpers ─────────────────────────────
 
   async notifyTaskAssigned(taskTitle: string, assignerName: string, assigneeId: string, boardId: string, taskId: string) {
-    return this.createNotification({
+    const notification = await this.createNotification({
       type: 'task_assigned',
       title: 'New Task Assignment',
       message: `${assignerName} assigned you to "${taskTitle}"`,
@@ -92,10 +94,31 @@ export class NotificationService {
       boardId,
       taskId,
     });
+
+    // Send email
+    try {
+      const user = await prisma.user.findUnique({ where: { id: assigneeId }, select: { email: true, name: true } });
+      const board = await prisma.board.findUnique({ where: { id: boardId }, select: { title: true } });
+      if (user && board) {
+        const taskLink = `${config.clientUrl}/board/${boardId}?task=${taskId}`;
+        const emailContent = buildTaskAssignedEmail({
+          assigneeName: user.name,
+          taskTitle,
+          assignerName,
+          boardTitle: board.title,
+          taskLink,
+        });
+        await sendEmail({ to: user.email, subject: emailContent.subject, html: emailContent.html });
+      }
+    } catch (err) {
+      console.error('Task assignment email failed:', err);
+    }
+
+    return notification;
   }
 
   async notifyCommentAdded(taskTitle: string, commenterName: string, recipientId: string, boardId: string, taskId: string) {
-    return this.createNotification({
+    const notification = await this.createNotification({
       type: 'comment_added',
       title: 'New Comment',
       message: `${commenterName} commented on "${taskTitle}"`,
@@ -103,6 +126,26 @@ export class NotificationService {
       boardId,
       taskId,
     });
+
+    // Send email
+    try {
+      const user = await prisma.user.findUnique({ where: { id: recipientId }, select: { email: true, name: true } });
+      if (user) {
+        const taskLink = `${config.clientUrl}/board/${boardId}?task=${taskId}`;
+        const emailContent = buildCommentEmail({
+          recipientName: user.name,
+          commenterName,
+          taskTitle,
+          commentPreview: `${commenterName} left a comment`,
+          taskLink,
+        });
+        await sendEmail({ to: user.email, subject: emailContent.subject, html: emailContent.html });
+      }
+    } catch (err) {
+      console.error('Comment email failed:', err);
+    }
+
+    return notification;
   }
 
   async notifyInvitation(boardTitle: string, inviterName: string, inviteeId: string, boardId: string) {
