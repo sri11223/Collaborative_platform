@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
@@ -22,6 +22,8 @@ export const SignupForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const { signup, isLoading } = useAuthStore();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect');
 
   const passwordStrength = useMemo(() => {
     if (!password) return { score: 0, label: '', color: '' };
@@ -294,7 +296,7 @@ export const SignupForm: React.FC = () => {
           <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
             Already have an account?{' '}
             <Link
-              to="/login"
+              to={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}
               className="text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
             >
               Sign in

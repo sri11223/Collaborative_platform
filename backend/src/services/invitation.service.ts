@@ -163,9 +163,13 @@ export class InvitationService {
       },
     });
     if (!invitation) throw new NotFoundError('Invitation not found');
-    if (invitation.status !== 'pending') throw new BadRequestError('Invitation is no longer pending');
+    // If already accepted (e.g. auto-accepted during signup), return with status so frontend can redirect
+    if (invitation.status === 'accepted') {
+      return { ...invitation, alreadyAccepted: true };
+    }
+    if (invitation.status !== 'pending') throw new BadRequestError('Invitation has been declined');
     if (invitation.expiresAt < new Date()) throw new BadRequestError('Invitation has expired');
-    return invitation;
+    return { ...invitation, alreadyAccepted: false };
   }
 
   async acceptByToken(token: string, userId: string) {

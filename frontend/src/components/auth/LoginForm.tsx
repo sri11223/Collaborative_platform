@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
@@ -21,6 +21,8 @@ export const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const { login, isLoading } = useAuthStore();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,7 +281,7 @@ export const LoginForm: React.FC = () => {
           <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
             Don&apos;t have an account?{' '}
             <Link
-              to="/signup"
+              to={redirect ? `/signup?redirect=${encodeURIComponent(redirect)}` : '/signup'}
               className="text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
             >
               Create one free

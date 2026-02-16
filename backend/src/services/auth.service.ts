@@ -40,11 +40,21 @@ export class AuthService {
     // Auto-accept any pending invitations for this email
     const pendingInvitations = await prisma.invitation.findMany({
       where: { inviteeEmail: data.email, status: 'pending' },
+      include: { board: true },
     });
     for (const inv of pendingInvitations) {
+      // Add as board member
       await prisma.boardMember.create({
         data: { boardId: inv.boardId, userId: user.id, role: inv.role },
       }).catch(() => {}); // ignore if already a member
+
+      // Also add as workspace member so the board appears on dashboard
+      if (inv.board.workspaceId) {
+        await prisma.workspaceMember.create({
+          data: { workspaceId: inv.board.workspaceId, userId: user.id, role: 'member' },
+        }).catch(() => {}); // ignore if already a member
+      }
+
       await prisma.invitation.update({
         where: { id: inv.id },
         data: { status: 'accepted' },

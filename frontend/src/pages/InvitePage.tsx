@@ -12,6 +12,7 @@ interface InviteInfo {
   id: string;
   inviteeEmail: string;
   role: string;
+  alreadyAccepted?: boolean;
   board: { id: string; title: string; color: string };
   inviter: { id: string; name: string; email: string; avatar: string | null };
 }
@@ -30,12 +31,22 @@ const InvitePage: React.FC = () => {
     if (token) {
       fetchInvite();
     }
-  }, [token]);
+  }, [token, isAuthenticated]);
 
   const fetchInvite = async () => {
     try {
       const { data } = await apiClient.get(`/invitations/token/${token}`);
-      setInvite(data.data);
+      const inviteData = data.data;
+      
+      // If invitation was already accepted (e.g. auto-accepted during signup) and user is logged in,
+      // redirect straight to the board
+      if (inviteData.alreadyAccepted && isAuthenticated) {
+        toast.success('You already joined this board!');
+        navigate(`/board/${inviteData.board.id}`, { replace: true });
+        return;
+      }
+      
+      setInvite(inviteData);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid or expired invitation link');
     } finally {
