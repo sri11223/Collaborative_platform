@@ -239,32 +239,41 @@ export const LoginForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Demo credentials */}
-          <button
-            type="button"
-            onClick={() => {
-              setEmail('sarah.johnson@taskflow.demo');
-              setPassword('Demo123!');
-            }}
-            className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700 bg-white dark:bg-gray-900 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all group cursor-pointer"
-          >
-            <img
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"
-              alt="Demo user"
-              className="w-11 h-11 rounded-full bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-200 dark:ring-gray-700 group-hover:ring-primary-300 dark:group-hover:ring-primary-600 transition-all"
-            />
-            <div className="text-left flex-1">
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
-                Sarah Johnson
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                sarah.johnson@taskflow.demo
-              </p>
-            </div>
-            <div className="text-xs text-gray-400 group-hover:text-primary-500 transition-colors font-medium">
-              Use Demo →
-            </div>
-          </button>
+          {/* Demo accounts */}
+          <div className="space-y-3">
+            {[
+              { name: 'Sarah Johnson', email: 'sarah.johnson@taskflow.demo', seed: 'Sarah', role: 'Engineering Lead' },
+              { name: 'Mike Chen', email: 'mike.chen@taskflow.demo', seed: 'Mike', role: 'Marketing & Freelance' },
+              { name: 'Emily Rodriguez', email: 'emily.rodriguez@taskflow.demo', seed: 'Emily', role: 'Design & Creative' },
+            ].map((demo) => (
+              <button
+                key={demo.email}
+                type="button"
+                onClick={() => {
+                  setEmail(demo.email);
+                  setPassword('Demo123!');
+                }}
+                className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700 bg-white dark:bg-gray-900 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all group cursor-pointer"
+              >
+                <img
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${demo.seed}`}
+                  alt={demo.name}
+                  className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-200 dark:ring-gray-700 group-hover:ring-primary-300 dark:group-hover:ring-primary-600 transition-all"
+                />
+                <div className="text-left flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
+                    {demo.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {demo.role}
+                  </p>
+                </div>
+                <div className="text-xs text-gray-400 group-hover:text-primary-500 transition-colors font-medium whitespace-nowrap">
+                  Use →
+                </div>
+              </button>
+            ))}
+          </div>
 
           {/* Sign up link */}
           <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
