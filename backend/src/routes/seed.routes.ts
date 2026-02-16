@@ -45,13 +45,18 @@ router.post('/seed', async (req: Request, res: Response) => {
 
     // Clear existing data
     await prisma.notification.deleteMany();
-    await prisma.boardActivity.deleteMany();
+    await prisma.activity.deleteMany();
     await prisma.comment.deleteMany();
-    await prisma.taskAssignment.deleteMany();
+    await prisma.taskAssignee.deleteMany();
+    await prisma.taskLabel.deleteMany();
     await prisma.task.deleteMany();
+    await prisma.list.deleteMany();
+    await prisma.label.deleteMany();
     await prisma.boardMember.deleteMany();
     await prisma.invitation.deleteMany();
+    await prisma.favoriteBoard.deleteMany();
     await prisma.board.deleteMany();
+    await prisma.workspaceMember.deleteMany();
     await prisma.workspace.deleteMany();
     await prisma.user.deleteMany();
 
@@ -105,7 +110,7 @@ router.post('/seed', async (req: Request, res: Response) => {
     const workspace1 = await prisma.workspace.create({
       data: {
         name: 'Acme Corporation',
-        description: 'Main company workspace for product development and operations',
+        color: '#6366f1',
         ownerId: users[0].id,
       },
     });
@@ -113,7 +118,7 @@ router.post('/seed', async (req: Request, res: Response) => {
     const workspace2 = await prisma.workspace.create({
       data: {
         name: 'Marketing Team',
-        description: 'Content creation, campaigns, and social media management',
+        color: '#ec4899',
         ownerId: users[1].id,
       },
     });
@@ -121,145 +126,207 @@ router.post('/seed', async (req: Request, res: Response) => {
     const workspace3 = await prisma.workspace.create({
       data: {
         name: 'Side Projects',
-        description: 'Personal projects and experiments',
+        color: '#10b981',
         ownerId: users[2].id,
       },
     });
 
     // Create boards
-    const boards = await Promise.all([
-      prisma.board.create({
-        data: {
-          name: 'Product Roadmap Q1 2026',
-          description: 'First quarter product development and feature releases',
-          workspaceId: workspace1.id,
-          isFavorite: true,
-        },
+    const board1 = await prisma.board.create({
+      data: {
+        title: 'Product Roadmap Q1 2026',
+        description: 'First quarter product development and feature releases',
+        color: '#3b82f6',
+        workspaceId: workspace1.id,
+        ownerId: users[0].id,
+      },
+    });
+
+    const board2 = await prisma.board.create({
+      data: {
+        title: 'Website Redesign',
+        description: 'Complete overhaul of company website with new branding',
+        color: '#8b5cf6',
+        workspaceId: workspace1.id,
+        ownerId: users[0].id,
+      },
+    });
+
+    const board3 = await prisma.board.create({
+      data: {
+        title: 'Q1 Marketing Campaigns',
+        description: 'Campaign planning and execution for Q1',
+        color: '#f59e0b',
+        workspaceId: workspace2.id,
+        ownerId: users[1].id,
+      },
+    });
+
+    const board4 = await prisma.board.create({
+      data: {
+        title: 'Content Calendar',
+        description: 'Blog posts, social media, and newsletter schedule',
+        color: '#ef4444',
+        workspaceId: workspace2.id,
+        ownerId: users[1].id,
+      },
+    });
+
+    const board5 = await prisma.board.create({
+      data: {
+        title: 'Mobile App Development',
+        description: 'iOS and Android app development sprint board',
+        color: '#06b6d4',
+        workspaceId: workspace3.id,
+        ownerId: users[2].id,
+      },
+    });
+
+    const boards = [board1, board2, board3, board4, board5];
+
+    // Add board members
+    const boardMembers = await Promise.all([
+      prisma.boardMember.create({
+        data: { boardId: board1.id, userId: users[0].id, role: 'admin' },
       }),
-      prisma.board.create({
-        data: {
-          name: 'Website Redesign',
-          description: 'Complete overhaul of company website with new branding',
-          workspaceId: workspace1.id,
-        },
+      prisma.boardMember.create({
+        data: { boardId: board1.id, userId: users[1].id, role: 'member' },
       }),
-      prisma.board.create({
-        data: {
-          name: 'Q1 Marketing Campaigns',
-          description: 'Campaign planning and execution for Q1',
-          workspaceId: workspace2.id,
-          isFavorite: true,
-        },
+      prisma.boardMember.create({
+        data: { boardId: board1.id, userId: users[3].id, role: 'member' },
       }),
-      prisma.board.create({
-        data: {
-          name: 'Content Calendar',
-          description: 'Blog posts, social media, and newsletter schedule',
-          workspaceId: workspace2.id,
-        },
+      prisma.boardMember.create({
+        data: { boardId: board2.id, userId: users[0].id, role: 'admin' },
       }),
-      prisma.board.create({
-        data: {
-          name: 'Mobile App Development',
-          description: 'iOS and Android app development sprint board',
-          workspaceId: workspace3.id,
-          isFavorite: true,
-        },
+      prisma.boardMember.create({
+        data: { boardId: board2.id, userId: users[2].id, role: 'member' },
+      }),
+      prisma.boardMember.create({
+        data: { boardId: board3.id, userId: users[1].id, role: 'admin' },
+      }),
+      prisma.boardMember.create({
+        data: { boardId: board3.id, userId: users[4].id, role: 'member' },
+      }),
+      prisma.boardMember.create({
+        data: { boardId: board4.id, userId: users[1].id, role: 'admin' },
+      }),
+      prisma.boardMember.create({
+        data: { boardId: board4.id, userId: users[4].id, role: 'member' },
+      }),
+      prisma.boardMember.create({
+        data: { boardId: board5.id, userId: users[2].id, role: 'admin' },
+      }),
+      prisma.boardMember.create({
+        data: { boardId: board5.id, userId: users[3].id, role: 'member' },
       }),
     ]);
 
-    // Add board members
-    const boardMembers = [];
-    boardMembers.push(
-      await prisma.boardMember.create({
-        data: { boardId: boards[0].id, userId: users[0].id, role: 'admin' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[0].id, userId: users[1].id, role: 'member' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[0].id, userId: users[3].id, role: 'member' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[1].id, userId: users[0].id, role: 'admin' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[1].id, userId: users[2].id, role: 'member' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[2].id, userId: users[1].id, role: 'admin' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[2].id, userId: users[4].id, role: 'member' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[3].id, userId: users[1].id, role: 'admin' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[3].id, userId: users[4].id, role: 'member' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[4].id, userId: users[2].id, role: 'admin' },
-      }),
-      await prisma.boardMember.create({
-        data: { boardId: boards[4].id, userId: users[3].id, role: 'member' },
-      })
-    );
+    // Add favorites
+    await Promise.all([
+      prisma.favoriteBoard.create({ data: { userId: users[0].id, boardId: board1.id } }),
+      prisma.favoriteBoard.create({ data: { userId: users[1].id, boardId: board3.id } }),
+      prisma.favoriteBoard.create({ data: { userId: users[2].id, boardId: board5.id } }),
+    ]);
+
+    // Create lists for Board 1
+    const list1_todo = await prisma.list.create({
+      data: { title: 'To Do', position: 0, boardId: board1.id },
+    });
+    const list1_progress = await prisma.list.create({
+      data: { title: 'In Progress', position: 1, boardId: board1.id },
+    });
+    const list1_done = await prisma.list.create({
+      data: { title: 'Done', position: 2, boardId: board1.id },
+    });
+
+    // Create lists for Board 2
+    const list2_todo = await prisma.list.create({
+      data: { title: 'Backlog', position: 0, boardId: board2.id },
+    });
+    const list2_progress = await prisma.list.create({
+      data: { title: 'Working On', position: 1, boardId: board2.id },
+    });
+
+    // Create labels
+    const label_feature = await prisma.label.create({
+      data: { name: 'Feature', color: '#3b82f6', boardId: board1.id },
+    });
+    const label_bug = await prisma.label.create({
+      data: { name: 'Bug', color: '#ef4444', boardId: board1.id },
+    });
+    const label_urgent = await prisma.label.create({
+      data: { name: 'Urgent', color: '#f59e0b', boardId: board1.id },
+    });
 
     // Create sample tasks
-    const tasks = await Promise.all([
-      prisma.task.create({
-        data: {
-          title: 'Design new user authentication flow',
-          description: 'Implement OAuth 2.0 and social login options',
-          status: 'in-progress',
-          priority: 'high',
-          dueDate: new Date('2026-03-15'),
-          boardId: boards[0].id,
-          position: 0,
-          labels: ['feature', 'security'],
-        },
-      }),
-      prisma.task.create({
-        data: {
-          title: 'Implement real-time collaboration',
-          description: 'Add WebSocket support for live updates',
-          status: 'todo',
-          priority: 'high',
-          boardId: boards[0].id,
-          position: 1,
-          labels: ['feature', 'backend'],
-        },
-      }),
-      prisma.task.create({
-        data: {
-          title: 'Database optimization',
-          description: 'Analyze and optimize slow queries',
-          status: 'in-progress',
-          priority: 'medium',
-          boardId: boards[0].id,
-          position: 2,
-          labels: ['performance'],
-        },
-      }),
-      prisma.task.create({
-        data: {
-          title: 'Mobile responsive improvements',
-          description: 'Fix layout issues on mobile devices',
-          status: 'done',
-          priority: 'medium',
-          boardId: boards[0].id,
-          position: 3,
-          labels: ['ui', 'mobile'],
-        },
-      }),
+    const task1 = await prisma.task.create({
+      data: {
+        title: 'Design new user authentication flow',
+        description: 'Implement OAuth 2.0 and social login options (Google, GitHub)',
+        priority: 'high',
+        dueDate: new Date('2026-03-15'),
+        listId: list1_progress.id,
+        position: 0,
+      },
+    });
+
+    const task2 = await prisma.task.create({
+      data: {
+        title: 'Implement real-time collaboration',
+        description: 'Add WebSocket support for live updates and presence',
+        priority: 'high',
+        listId: list1_todo.id,
+        position: 0,
+      },
+    });
+
+    const task3 = await prisma.task.create({
+      data: {
+        title: 'Database optimization',
+        description: 'Analyze and optimize slow queries, add indexes',
+        priority: 'medium',
+        listId: list1_progress.id,
+        position: 1,
+      },
+    });
+
+    const task4 = await prisma.task.create({
+      data: {
+        title: 'Mobile responsive improvements',
+        description: 'Fix layout issues on mobile devices',
+        priority: 'medium',
+        listId: list1_done.id,
+        position: 0,
+      },
+    });
+
+    const task5 = await prisma.task.create({
+      data: {
+        title: 'Create brand identity guidelines',
+        description: 'Define color palette, typography, and design system',
+        priority: 'high',
+        dueDate: new Date('2026-02-25'),
+        listId: list2_progress.id,
+        position: 0,
+      },
+    });
+
+    const tasks = [task1, task2, task3, task4, task5];
+
+    // Assign labels to tasks
+    await Promise.all([
+      prisma.taskLabel.create({ data: { taskId: task1.id, labelId: label_feature.id } }),
+      prisma.taskLabel.create({ data: { taskId: task1.id, labelId: label_urgent.id } }),
+      prisma.taskLabel.create({ data: { taskId: task2.id, labelId: label_feature.id } }),
+      prisma.taskLabel.create({ data: { taskId: task3.id, labelId: label_bug.id } }),
     ]);
 
     // Assign tasks
     await Promise.all([
-      prisma.taskAssignment.create({ data: { taskId: tasks[0].id, userId: users[1].id } }),
-      prisma.taskAssignment.create({ data: { taskId: tasks[1].id, userId: users[3].id } }),
-      prisma.taskAssignment.create({ data: { taskId: tasks[2].id, userId: users[0].id } }),
+      prisma.taskAssignee.create({ data: { taskId: task1.id, userId: users[1].id } }),
+      prisma.taskAssignee.create({ data: { taskId: task2.id, userId: users[3].id } }),
+      prisma.taskAssignee.create({ data: { taskId: task3.id, userId: users[0].id } }),
+      prisma.taskAssignee.create({ data: { taskId: task5.id, userId: users[2].id } }),
     ]);
 
     // Create comments
@@ -267,15 +334,22 @@ router.post('/seed', async (req: Request, res: Response) => {
       prisma.comment.create({
         data: {
           content: 'Started working on OAuth integration with Passport.js',
-          taskId: tasks[0].id,
+          taskId: task1.id,
           userId: users[1].id,
         },
       }),
       prisma.comment.create({
         data: {
-          content: 'Great progress! Make sure to handle edge cases.',
-          taskId: tasks[0].id,
+          content: 'Great progress! Make sure to handle edge cases for account linking.',
+          taskId: task1.id,
           userId: users[0].id,
+        },
+      }),
+      prisma.comment.create({
+        data: {
+          content: 'Should we use Socket.IO or raw WebSockets? Socket.IO has better fallback support.',
+          taskId: task2.id,
+          userId: users[3].id,
         },
       }),
     ]);
@@ -286,34 +360,63 @@ router.post('/seed', async (req: Request, res: Response) => {
         data: {
           userId: users[1].id,
           type: 'task_assigned',
+          title: 'New Task Assigned',
           message: 'You were assigned to "Design new user authentication flow"',
           read: false,
+          boardId: board1.id,
+          taskId: task1.id,
         },
       }),
       prisma.notification.create({
         data: {
           userId: users[3].id,
           type: 'task_assigned',
+          title: 'New Task Assigned',
           message: 'You were assigned to "Implement real-time collaboration"',
           read: false,
+          boardId: board1.id,
+          taskId: task2.id,
+        },
+      }),
+      prisma.notification.create({
+        data: {
+          userId: users[0].id,
+          type: 'comment_added',
+          title: 'New Comment',
+          message: 'Mike Chen commented on a task',
+          read: true,
+          boardId: board1.id,
+          taskId: task1.id,
         },
       }),
     ]);
 
     // Create activity logs
     await Promise.all([
-      prisma.boardActivity.create({
+      prisma.activity.create({
         data: {
-          boardId: boards[0].id,
+          type: 'board_created',
+          description: 'created board "Product Roadmap Q1 2026"',
+          boardId: board1.id,
           userId: users[0].id,
-          action: 'created board "Product Roadmap Q1 2026"',
         },
       }),
-      prisma.boardActivity.create({
+      prisma.activity.create({
         data: {
-          boardId: boards[0].id,
+          type: 'task_created',
+          description: 'added task "Design new user authentication flow"',
+          boardId: board1.id,
           userId: users[1].id,
-          action: 'added task "Design new user authentication flow"',
+          taskId: task1.id,
+        },
+      }),
+      prisma.activity.create({
+        data: {
+          type: 'task_assigned',
+          description: 'assigned task to Mike Chen',
+          boardId: board1.id,
+          userId: users[0].id,
+          taskId: task1.id,
         },
       }),
     ]);
@@ -328,8 +431,12 @@ router.post('/seed', async (req: Request, res: Response) => {
           users: users.length,
           workspaces: 3,
           boards: boards.length,
+          lists: 5,
           tasks: tasks.length,
           boardMembers: boardMembers.length,
+          labels: 3,
+          comments: 3,
+          notifications: 3,
         },
         demoCredentials: {
           email: '[user]@taskflow.demo',
